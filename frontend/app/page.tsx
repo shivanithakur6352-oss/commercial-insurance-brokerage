@@ -91,3 +91,4 @@ function EnquiryList({items,broker,quote,setQuote,updateStatus,saveQuote}:{items
   }
 })}{insurer:"",indicativePremium:"",coverageLimit:"",terms:"",...quote?.[item._id],terms:e.target.value}})}/></div><button className="primary small" onClick={()=>saveQuote?.(item._id)}>Save quotation</button></div>}</article>)}</div>;
 }
+
