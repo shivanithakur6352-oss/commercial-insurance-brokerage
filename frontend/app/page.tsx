@@ -61,34 +61,162 @@ export default function Home() {
   {user.role!=="customer"&&<><section className="stats">{Object.entries(summary||{}).map(([k,v])=><div className="stat panel" key={k}><span>{k.replace(/[A-Z]/g," $&")}</span><strong>{v}</strong></div>)}</section><section className="panel"><h2>Enquiry pipeline</h2><p className="muted">Review requests and manage broker responses.</p><EnquiryList items={enquiries} broker quote={quote} setQuote={setQuote} updateStatus={updateStatus} saveQuote={saveQuote}/></section></>}
   <footer>CoverBridge MVP · For broker-assisted enquiries only · Not an insurance policy or binding quote</footer></main>;
 }
-function EnquiryList({items,broker,quote,setQuote,updateStatus,saveQuote}:{items:Enquiry[];broker?:boolean;quote?:Record<string,{insurer:string;indicativePremium:string;coverageLimit:string;terms:string}>;setQuote?:(v:Record<string,{insurer:string;indicativePremium:string;coverageLimit:string;terms:string}>)=>void;updateStatus?:(id:string,s:string)=>void;saveQuote?:(id:string)=>void}) {
- if(!items.length)return <div className="empty">No enquiries yet.</div>;
- return <div className="enquiryList">{items.map(item=><article className="enquiry" key={item._id}><div className="enquiryHead"><div><span className="productTag">{item.insuranceType}</span><h3>{item.companyName}</h3><p className="muted">{item.industry} · {new Date(item.createdAt).toLocaleDateString()}</p>{item.customer&&<p className="muted">Contact: {item.customer.name} ({item.customer.email})</p>}</div><span className={`status ${item.status}`}>{item.status.replace("_"," ")}</span></div>{item.riskAssessment&&<p className="risk">{item.riskAssessment}</p>}{item.quotation?.insurer&&<div className="quoteView"><b>{item.quotation.insurer}</b> · Indicative premium: {item.quotation.indicativePremium||"Not provided"} · Limit: {item.quotation.coverageLimit||"Not provided"}<p>{item.quotation.terms}</p></div>}{broker&&<div className="brokerTools"><label>Status<select value={item.status} onChange={e=>updateStatus?.(item._id,e.target.value)}><option value="submitted">Submitted</option><option value="under_review">Under review</option><option value="quote_ready">Quote ready</option><option value="closed">Closed</option></select></label><div className="quoteFields"><input placeholder="Insurer" value={quote?.[item._id]?.insurer||""} onChange={e=>setQuote?.({
-  ...quote,
-  [item._id]: {
-    ...(quote?.[item._id] ?? {}),
-    insurer: e.target.value
-  }
-})}{insurer:"",indicativePremium:"",coverageLimit:"",terms:"",...quote?.[item._id],insurer:e.target.value}})}/><input placeholder="Indicative premium" value={quote?.[item._id]?.indicativePremium||""} onChange={e=>setQuote?.({...quote,[item._id]:{
-  ...(quote?.[item._id] ?? {
-    insurer: "",
-    indicativePremium: "",
-    coverageLimit: "",
-    terms: ""
-  }),
-  insurer: e.target.value
-}})}/><input placeholder="Coverage limit" value={quote?.[item._id]?.coverageLimit||""} onChange={e=>setQuote?.({
-  ...quote,
-  [item._id]: {
-    ...(quote?.[item._id] ?? {}),
-    insurer: e.target.value
-  }
-})}{insurer:"",indicativePremium:"",coverageLimit:"",terms:"",...quote?.[item._id],coverageLimit:e.target.value}})}/><input placeholder="Terms / notes" value={quote?.[item._id]?.terms||""} onChange={e=>setQuote?.({
-  ...quote,
-  [item._id]: {
-    ...(quote?.[item._id] ?? {}),
-    insurer: e.target.value
-  }
-})}{insurer:"",indicativePremium:"",coverageLimit:"",terms:"",...quote?.[item._id],terms:e.target.value}})}/></div><button className="primary small" onClick={()=>saveQuote?.(item._id)}>Save quotation</button></div>}</article>)}</div>;
-}
 
+function EnquiryList({
+  items,
+  broker,
+  quote,
+  setQuote,
+  updateStatus,
+  saveQuote
+}: {
+  items: Enquiry[];
+  broker?: boolean;
+  quote?: Record<string, {
+    insurer: string;
+    indicativePremium: string;
+    coverageLimit: string;
+    terms: string;
+  }>;
+  setQuote?: (v: Record<string, {
+    insurer: string;
+    indicativePremium: string;
+    coverageLimit: string;
+    terms: string;
+  }>) => void;
+  updateStatus?: (id: string, s: string) => void;
+  saveQuote?: (id: string) => void;
+}) {
+  if (!items.length) {
+    return <div className="empty">No enquiries yet.</div>;
+  }
+
+  return (
+    <div className="enquiryList">
+      {items.map(item => (
+        <article className="enquiry" key={item._id}>
+          <div className="enquiryHead">
+            <div>
+              <span className="productTag">{item.insuranceType}</span>
+              <h3>{item.companyName}</h3>
+              <p className="muted">
+                {item.industry} · {new Date(item.createdAt).toLocaleDateString()}
+              </p>
+              {item.customer && (
+                <p className="muted">
+                  Contact: {item.customer.name} ({item.customer.email})
+                </p>
+              )}
+            </div>
+            <span className={`status ${item.status}`}>
+              {item.status.replace("_", " ")}
+            </span>
+          </div>
+
+          {item.riskAssessment && (
+            <p className="risk">{item.riskAssessment}</p>
+          )}
+
+          {item.quotation?.insurer && (
+            <div className="quoteView">
+              <b>{item.quotation.insurer}</b>
+              {" · "}Indicative premium: {item.quotation.indicativePremium || "Not provided"}
+              {" · "}Limit: {item.quotation.coverageLimit || "Not provided"}
+              <p>{item.quotation.terms}</p>
+            </div>
+          )}
+
+          {broker && (
+            <div className="brokerTools">
+              <label>
+                Status
+                <select
+                  value={item.status}
+                  onChange={e => updateStatus?.(item._id, e.target.value)}
+                >
+                  <option value="submitted">Submitted</option>
+                  <option value="under_review">Under review</option>
+                  <option value="quote_ready">Quote ready</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </label>
+
+              <div className="quoteFields">
+                <input
+                  placeholder="Insurer"
+                  value={quote?.[item._id]?.insurer || ""}
+                  onChange={e => setQuote?.({
+                    ...quote,
+                    [item._id]: {
+                      insurer: "",
+                      indicativePremium: "",
+                      coverageLimit: "",
+                      terms: "",
+                      ...quote?.[item._id],
+                      insurer: e.target.value
+                    }
+                  })}
+                />
+
+                <input
+                  placeholder="Indicative premium"
+                  value={quote?.[item._id]?.indicativePremium || ""}
+                  onChange={e => setQuote?.({
+                    ...quote,
+                    [item._id]: {
+                      insurer: "",
+                      indicativePremium: "",
+                      coverageLimit: "",
+                      terms: "",
+                      ...quote?.[item._id],
+                      indicativePremium: e.target.value
+                    }
+                  })}
+                />
+
+                <input
+                  placeholder="Coverage limit"
+                  value={quote?.[item._id]?.coverageLimit || ""}
+                  onChange={e => setQuote?.({
+                    ...quote,
+                    [item._id]: {
+                      insurer: "",
+                      indicativePremium: "",
+                      coverageLimit: "",
+                      terms: "",
+                      ...quote?.[item._id],
+                      coverageLimit: e.target.value
+                    }
+                  })}
+                />
+
+                <input
+                  placeholder="Terms / notes"
+                  value={quote?.[item._id]?.terms || ""}
+                  onChange={e => setQuote?.({
+                    ...quote,
+                    [item._id]: {
+                      insurer: "",
+                      indicativePremium: "",
+                      coverageLimit: "",
+                      terms: "",
+                      ...quote?.[item._id],
+                      terms: e.target.value
+                    }
+                  })}
+                />
+              </div>
+
+              <button
+                className="primary small"
+                onClick={() => saveQuote?.(item._id)}
+              >
+                Save quotation
+              </button>
+            </div>
+          )}
+        </article>
+      ))}
+    </div>
+  );
+}
