@@ -594,18 +594,29 @@ export default function Home() {
   );
 }
 
+
 function EnquiryList({
   items,
   broker,
   quote,
   setQuote,
   updateStatus,
-  saveQuote,
+  saveQuote
 }: {
   items: Enquiry[];
   broker?: boolean;
-  quote?: Record<string, Quote>;
-  setQuote?: (v: Record<string, Quote>) => void;
+  quote?: Record<string, {
+    insurer: string;
+    indicativePremium: string;
+    coverageLimit: string;
+    terms: string;
+  }>;
+  setQuote?: (v: Record<string, {
+    insurer: string;
+    indicativePremium: string;
+    coverageLimit: string;
+    terms: string;
+  }>) => void;
   updateStatus?: (id: string, s: string) => void;
   saveQuote?: (id: string) => void;
 }) {
@@ -619,21 +630,15 @@ function EnquiryList({
         <article className="enquiry" key={item._id}>
           <div className="enquiryHead">
             <div>
-              <span className="productTag">
-                {item.insuranceType}
-              </span>
-
+              <span className="productTag">{item.insuranceType}</span>
               <h3>{item.companyName}</h3>
-
               <p className="muted">
-                {item.industry} ·{" "}
-                {new Date(item.createdAt).toLocaleDateString()}
+                {item.industry} · {new Date(item.createdAt).toLocaleDateString()}
               </p>
 
               {item.customer && (
                 <p className="muted">
-                  Contact: {item.customer.name} (
-                  {item.customer.email})
+                  Contact: {item.customer.name} ({item.customer.email})
                 </p>
               )}
             </div>
@@ -650,11 +655,8 @@ function EnquiryList({
           {item.quotation?.insurer && (
             <div className="quoteView">
               <b>{item.quotation.insurer}</b>
-              {" · "}Indicative premium:{" "}
-              {item.quotation.indicativePremium || "Not provided"}
-              {" · "}Limit:{" "}
-              {item.quotation.coverageLimit || "Not provided"}
-
+              {" · "}Indicative premium: {item.quotation.indicativePremium || "Not provided"}
+              {" · "}Limit: {item.quotation.coverageLimit || "Not provided"}
               <p>{item.quotation.terms}</p>
             </div>
           )}
@@ -665,9 +667,7 @@ function EnquiryList({
                 Status
                 <select
                   value={item.status}
-                  onChange={(e) =>
-                    updateStatus?.(item._id, e.target.value)
-                  }
+                  onChange={(e) => updateStatus?.(item._id, e.target.value)}
                 >
                   <option value="submitted">Submitted</option>
                   <option value="under_review">Under review</option>
@@ -684,35 +684,27 @@ function EnquiryList({
                     setQuote?.({
                       ...quote,
                       [item._id]: {
-                        ...(quote?.[item._id] ?? {
-                          insurer: "",
-                          indicativePremium: "",
-                          coverageLimit: "",
-                          terms: "",
-                        }),
                         insurer: e.target.value,
-                      },
+                        indicativePremium: quote?.[item._id]?.indicativePremium || "",
+                        coverageLimit: quote?.[item._id]?.coverageLimit || "",
+                        terms: quote?.[item._id]?.terms || ""
+                      }
                     })
                   }
                 />
 
                 <input
                   placeholder="Indicative premium"
-                  value={
-                    quote?.[item._id]?.indicativePremium || ""
-                  }
+                  value={quote?.[item._id]?.indicativePremium || ""}
                   onChange={(e) =>
                     setQuote?.({
                       ...quote,
                       [item._id]: {
-                        ...(quote?.[item._id] ?? {
-                          insurer: "",
-                          indicativePremium: "",
-                          coverageLimit: "",
-                          terms: "",
-                        }),
+                        insurer: quote?.[item._id]?.insurer || "",
                         indicativePremium: e.target.value,
-                      },
+                        coverageLimit: quote?.[item._id]?.coverageLimit || "",
+                        terms: quote?.[item._id]?.terms || ""
+                      }
                     })
                   }
                 />
@@ -724,14 +716,11 @@ function EnquiryList({
                     setQuote?.({
                       ...quote,
                       [item._id]: {
-                        ...(quote?.[item._id] ?? {
-                          insurer: "",
-                          indicativePremium: "",
-                          coverageLimit: "",
-                          terms: "",
-                        }),
+                        insurer: quote?.[item._id]?.insurer || "",
+                        indicativePremium: quote?.[item._id]?.indicativePremium || "",
                         coverageLimit: e.target.value,
-                      },
+                        terms: quote?.[item._id]?.terms || ""
+                      }
                     })
                   }
                 />
@@ -743,23 +732,27 @@ function EnquiryList({
                     setQuote?.({
                       ...quote,
                       [item._id]: {
-                        ...(quote?.[item._id] ?? {
-                          insurer: "",
-                          indicativePremium: "",
-                          coverageLimit: "",
-                          terms: "",
-                        }),
-                        terms: e.target.value,
-                      },
+                        insurer: quote?.[item._id]?.insurer || "",
+                        indicativePremium: quote?.[item._id]?.indicativePremium || "",
+                        coverageLimit: quote?.[item._id]?.coverageLimit || "",
+                        terms: e.target.value
+                      }
                     })
                   }
                 />
               </div>
 
               <button
+                type="button"
                 className="primary small"
                 onClick={() => saveQuote?.(item._id)}
               >
                 Save quotation
               </button>
-  
+            </div>
+          )}
+        </article>
+      ))}
+    </div>
+  );
+}
