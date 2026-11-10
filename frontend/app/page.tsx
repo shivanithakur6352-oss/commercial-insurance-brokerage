@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -44,10 +43,14 @@ type Quote = {
 export default function Home() {
   const [token, setToken] = useState("");
   const [user, setUser] = useState<User | null>(null);
+
   const [mode, setMode] = useState<"login" | "register">("register");
+  const [showAuth, setShowAuth] = useState(false);
+
   const [message, setMessage] = useState("");
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
-  const [summary, setSummary] = useState<Record<string, number> | null>(null);
+  const [summary, setSummary] =
+    useState<Record<string, number> | null>(null);
 
   const [authForm, setAuthForm] = useState({
     name: "",
@@ -69,12 +72,18 @@ export default function Home() {
 
   const [quote, setQuote] = useState<Record<string, Quote>>({});
 
-  async function request(path: string, options: RequestInit = {}) {
+  async function request(
+    path: string,
+    options: RequestInit = {},
+    authToken = token
+  ) {
     const response = await fetch(`${API}${path}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(authToken
+          ? { Authorization: `Bearer ${authToken}` }
+          : {}),
         ...(options.headers || {}),
       },
     });
@@ -127,7 +136,9 @@ export default function Home() {
       }
     } catch (e) {
       setMessage(
-        e instanceof Error ? e.message : "Could not load dashboard"
+        e instanceof Error
+          ? e.message
+          : "Could not load dashboard"
       );
     }
   }
@@ -139,6 +150,7 @@ export default function Home() {
     if (saved && savedUser) {
       try {
         const u = JSON.parse(savedUser) as User;
+
         setToken(saved);
         setUser(u);
         loadDashboard(saved, u);
@@ -154,10 +166,14 @@ export default function Home() {
     setMessage("");
 
     try {
-      const data = await request(`/auth/${mode}`, {
-        method: "POST",
-        body: JSON.stringify(authForm),
-      });
+      const data = await request(
+        `/auth/${mode}`,
+        {
+          method: "POST",
+          body: JSON.stringify(authForm),
+        },
+        ""
+      );
 
       setToken(data.token);
       setUser(data.user);
@@ -168,11 +184,15 @@ export default function Home() {
         JSON.stringify(data.user)
       );
 
+      setShowAuth(false);
       setMessage("Welcome to CoverBridge.");
+
       loadDashboard(data.token, data.user);
     } catch (e) {
       setMessage(
-        e instanceof Error ? e.message : "Authentication failed"
+        e instanceof Error
+          ? e.message
+          : "Authentication failed"
       );
     }
   }
@@ -202,7 +222,9 @@ export default function Home() {
       loadDashboard();
     } catch (e) {
       setMessage(
-        e instanceof Error ? e.message : "Could not submit enquiry"
+        e instanceof Error
+          ? e.message
+          : "Could not submit enquiry"
       );
     }
   }
@@ -214,10 +236,13 @@ export default function Home() {
         body: JSON.stringify({ status }),
       });
 
+      setMessage("Enquiry status updated.");
       loadDashboard();
     } catch (e) {
       setMessage(
-        e instanceof Error ? e.message : "Could not update status"
+        e instanceof Error
+          ? e.message
+          : "Could not update status"
       );
     }
   }
@@ -233,7 +258,9 @@ export default function Home() {
       loadDashboard();
     } catch (e) {
       setMessage(
-        e instanceof Error ? e.message : "Could not save quotation"
+        e instanceof Error
+          ? e.message
+          : "Could not save quotation"
       );
     }
   }
@@ -248,19 +275,271 @@ export default function Home() {
     setSummary(null);
     setQuote({});
     setMessage("");
+    setShowAuth(false);
+    setMode("register");
   }
+
+  // CUSTOMER ONBOARDING LANDING PAGE
+
+  if (!user && !showAuth) {
+    return (
+      <main className="landingPage">
+        <nav className="landingNav">
+          <div className="brand">
+            <span className="brandMark">C</span>
+
+            <span>
+              CoverBridge
+              <small>COMMERCIAL INSURANCE</small>
+            </span>
+          </div>
+
+          <div className="navActions">
+            <button
+              className="linkButton"
+              onClick={() => {
+                setMode("login");
+                setShowAuth(true);
+              }}
+            >
+              Sign In
+            </button>
+
+            <button
+              className="primary"
+              onClick={() => {
+                setMode("register");
+                setShowAuth(true);
+              }}
+            >
+              Get Started
+            </button>
+          </div>
+        </nav>
+
+        <section className="landingHero">
+          <div className="landingHeroContent">
+            <span className="eyebrow">
+              COMMERCIAL INSURANCE, SIMPLIFIED
+            </span>
+
+            <h1>
+              Protect Your Business.
+              <br />
+              <span>Focus on Growth.</span>
+            </h1>
+
+            <p>
+              Discover business insurance solutions with expert
+              broker assistance. Submit your requirements, track
+              enquiries and receive quotations in one place.
+            </p>
+
+            <div className="landingActions">
+              <button
+                className="primary"
+                onClick={() => {
+                  setMode("register");
+                  setShowAuth(true);
+                }}
+              >
+                Get Started →
+              </button>
+
+              <button
+                className="outline"
+                onClick={() => {
+                  setMode("login");
+                  setShowAuth(true);
+                }}
+              >
+                Existing Customer? Sign In
+              </button>
+            </div>
+
+            <div className="heroTags">
+              <span>D&O Insurance</span>
+              <span>Cyber Liability</span>
+              <span>Key-Person Insurance</span>
+            </div>
+          </div>
+
+          <div className="landingVisual">
+            <div className="visualCard">
+              <span className="visualIcon">🛡️</span>
+
+              <h3>
+                Your business deserves protection.
+              </h3>
+
+              <p>
+                Manage insurance enquiries and broker
+                communication through one simple workspace.
+              </p>
+
+              <div className="visualFeature">
+                <span>✓</span>
+                Business risk assessment
+              </div>
+
+              <div className="visualFeature">
+                <span>✓</span>
+                Broker-assisted quotations
+              </div>
+
+              <div className="visualFeature">
+                <span>✓</span>
+                Enquiry tracking
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="landingSection">
+          <span className="eyebrow">OUR SOLUTIONS</span>
+
+          <h2>
+            Insurance support for growing businesses
+          </h2>
+
+          <p className="muted">
+            Explore coverage options designed to address
+            important business risks.
+          </p>
+
+          <div className="featureGrid">
+            <article className="featureCard">
+              <span className="featureIcon">🏢</span>
+
+              <h3>Directors & Officers</h3>
+
+              <p>
+                Explore protection for directors and officers
+                against certain management-related claims.
+              </p>
+            </article>
+
+            <article className="featureCard">
+              <span className="featureIcon">🔐</span>
+
+              <h3>Cyber Liability</h3>
+
+              <p>
+                Explore insurance options for cyber incidents,
+                data breaches and related business risks.
+              </p>
+            </article>
+
+            <article className="featureCard">
+              <span className="featureIcon">👤</span>
+
+              <h3>Key-Person Insurance</h3>
+
+              <p>
+                Explore ways to address financial risks associated
+                with the loss of a key business individual.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section className="howSection">
+          <span className="eyebrow">SIMPLE PROCESS</span>
+
+          <h2>How CoverBridge works</h2>
+
+          <div className="stepsGrid">
+            <article>
+              <span className="stepNumber">01</span>
+
+              <h3>Create an account</h3>
+
+              <p>Register your business on CoverBridge.</p>
+            </article>
+
+            <article>
+              <span className="stepNumber">02</span>
+
+              <h3>Submit requirements</h3>
+
+              <p>
+                Share your business details and insurance needs.
+              </p>
+            </article>
+
+            <article>
+              <span className="stepNumber">03</span>
+
+              <h3>Broker review</h3>
+
+              <p>
+                A broker reviews your submitted enquiry.
+              </p>
+            </article>
+
+            <article>
+              <span className="stepNumber">04</span>
+
+              <h3>Track quotations</h3>
+
+              <p>
+                Follow your enquiry and view available quotations.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section className="landingCTA">
+          <h2>Ready to take the next step?</h2>
+
+          <p>
+            Create your business account and submit your
+            insurance requirements.
+          </p>
+
+          <button
+            className="primary"
+            onClick={() => {
+              setMode("register");
+              setShowAuth(true);
+            }}
+          >
+            Create Your Account →
+          </button>
+        </section>
+
+        <footer className="landingFooter">
+          <strong>CoverBridge</strong>
+
+          <p>
+            Commercial Insurance Brokerage MVP · For
+            broker-assisted enquiries only. Not an insurance
+            policy or binding quote.
+          </p>
+        </footer>
+      </main>
+    );
+  }
+
+  // LOGIN AND REGISTRATION
 
   if (!user) {
     return (
       <main className="authShell">
         <section className="hero">
-          <span className="eyebrow">B2B COMMERCIAL INSURANCE</span>
+          <span className="eyebrow">
+            B2B COMMERCIAL INSURANCE
+          </span>
 
-          <h1>Clarity for the risks behind your growth.</h1>
+          <h1>
+            {mode === "register"
+              ? "Start protecting your business."
+              : "Welcome back to CoverBridge."}
+          </h1>
 
           <p>
-            One place for businesses to request D&O, Cyber Liability
-            and Key-Person insurance support from a broker.
+            One place for businesses to request D&O, Cyber
+            Liability and Key-Person insurance support from a broker.
           </p>
 
           <div className="heroTags">
@@ -271,6 +550,17 @@ export default function Home() {
         </section>
 
         <form className="panel authPanel" onSubmit={authenticate}>
+          <button
+            type="button"
+            className="linkButton"
+            onClick={() => {
+              setShowAuth(false);
+              setMessage("");
+            }}
+          >
+            ← Back to Home
+          </button>
+
           <h2>
             {mode === "register"
               ? "Create business account"
@@ -285,6 +575,7 @@ export default function Home() {
             <>
               <label>
                 Full name
+
                 <input
                   required
                   value={authForm.name}
@@ -299,6 +590,7 @@ export default function Home() {
 
               <label>
                 Company name
+
                 <input
                   value={authForm.companyName}
                   onChange={(e) =>
@@ -312,6 +604,7 @@ export default function Home() {
 
               <label>
                 Phone
+
                 <input
                   value={authForm.phone}
                   onChange={(e) =>
@@ -327,6 +620,7 @@ export default function Home() {
 
           <label>
             Email
+
             <input
               required
               type="email"
@@ -342,6 +636,7 @@ export default function Home() {
 
           <label>
             Password
+
             <input
               required
               minLength={8}
@@ -357,14 +652,18 @@ export default function Home() {
           </label>
 
           <button className="primary">
-            {mode === "register" ? "Create account" : "Sign in"}
+            {mode === "register"
+              ? "Create account"
+              : "Sign in"}
           </button>
 
           <button
             type="button"
             className="linkButton"
             onClick={() =>
-              setMode(mode === "register" ? "login" : "register")
+              setMode(
+                mode === "register" ? "login" : "register"
+              )
             }
           >
             {mode === "register"
@@ -372,11 +671,15 @@ export default function Home() {
               : "New here? Create account"}
           </button>
 
-          {message && <p className="notice">{message}</p>}
+          {message && (
+            <p className="notice">{message}</p>
+          )}
         </form>
       </main>
     );
   }
+
+  // LOGGED-IN DASHBOARD
 
   return (
     <main className="appShell">
@@ -421,7 +724,9 @@ export default function Home() {
       </section>
 
       {message && (
-        <div className="notice globalNotice">{message}</div>
+        <div className="notice globalNotice">
+          {message}
+        </div>
       )}
 
       {user.role === "customer" && (
@@ -430,11 +735,13 @@ export default function Home() {
             <h2>Request insurance support</h2>
 
             <p className="muted">
-              Share your requirements. A broker will review your enquiry.
+              Share your requirements. A broker will review
+              your enquiry.
             </p>
 
             <label>
               Company name
+
               <input
                 required
                 value={form.companyName}
@@ -449,6 +756,7 @@ export default function Home() {
 
             <label>
               Industry
+
               <input
                 required
                 value={form.industry}
@@ -464,6 +772,7 @@ export default function Home() {
             <div className="twoCol">
               <label>
                 Employees
+
                 <input
                   type="number"
                   min="1"
@@ -479,6 +788,7 @@ export default function Home() {
 
               <label>
                 Annual revenue
+
                 <input
                   placeholder="e.g. ₹5 crore"
                   value={form.annualRevenue}
@@ -494,6 +804,7 @@ export default function Home() {
 
             <label>
               Country
+
               <input
                 value={form.country}
                 onChange={(e) =>
@@ -507,6 +818,7 @@ export default function Home() {
 
             <label>
               Insurance product
+
               <select
                 value={form.insuranceType}
                 onChange={(e) =>
@@ -524,6 +836,7 @@ export default function Home() {
 
             <label>
               Requirements / context
+
               <textarea
                 rows={4}
                 value={form.coverageNotes}
@@ -556,15 +869,17 @@ export default function Home() {
       {user.role !== "customer" && (
         <>
           <section className="stats">
-            {Object.entries(summary || {}).map(([key, value]) => (
-              <div className="stat panel" key={key}>
-                <span>
-                  {key.replace(/[A-Z]/g, " $&")}
-                </span>
+            {Object.entries(summary || {}).map(
+              ([key, value]) => (
+                <div className="stat panel" key={key}>
+                  <span>
+                    {key.replace(/[A-Z]/g, " $&")}
+                  </span>
 
-                <strong>{value}</strong>
-              </div>
-            ))}
+                  <strong>{value}</strong>
+                </div>
+              )
+            )}
           </section>
 
           <section className="panel">
@@ -587,13 +902,14 @@ export default function Home() {
       )}
 
       <footer>
-        CoverBridge MVP · For broker-assisted enquiries only · Not an
-        insurance policy or binding quote
+        CoverBridge MVP · For broker-assisted enquiries only ·
+        Not an insurance policy or binding quote
       </footer>
     </main>
   );
 }
 
+// ENQUIRY LIST COMPONENT
 
 function EnquiryList({
   items,
@@ -601,27 +917,21 @@ function EnquiryList({
   quote,
   setQuote,
   updateStatus,
-  saveQuote
+  saveQuote,
 }: {
   items: Enquiry[];
   broker?: boolean;
-  quote?: Record<string, {
-    insurer: string;
-    indicativePremium: string;
-    coverageLimit: string;
-    terms: string;
-  }>;
-  setQuote?: (v: Record<string, {
-    insurer: string;
-    indicativePremium: string;
-    coverageLimit: string;
-    terms: string;
-  }>) => void;
+  quote?: Record<string, Quote>;
+  setQuote?: (v: Record<string, Quote>) => void;
   updateStatus?: (id: string, s: string) => void;
   saveQuote?: (id: string) => void;
 }) {
   if (!items.length) {
-    return <div className="empty">No enquiries yet.</div>;
+    return (
+      <div className="empty">
+        No enquiries yet.
+      </div>
+    );
   }
 
   return (
@@ -630,15 +940,21 @@ function EnquiryList({
         <article className="enquiry" key={item._id}>
           <div className="enquiryHead">
             <div>
-              <span className="productTag">{item.insuranceType}</span>
+              <span className="productTag">
+                {item.insuranceType}
+              </span>
+
               <h3>{item.companyName}</h3>
+
               <p className="muted">
-                {item.industry} · {new Date(item.createdAt).toLocaleDateString()}
+                {item.industry} ·{" "}
+                {new Date(item.createdAt).toLocaleDateString()}
               </p>
 
               {item.customer && (
                 <p className="muted">
-                  Contact: {item.customer.name} ({item.customer.email})
+                  Contact: {item.customer.name} (
+                  {item.customer.email})
                 </p>
               )}
             </div>
@@ -649,14 +965,23 @@ function EnquiryList({
           </div>
 
           {item.riskAssessment && (
-            <p className="risk">{item.riskAssessment}</p>
+            <p className="risk">
+              {item.riskAssessment}
+            </p>
           )}
 
           {item.quotation?.insurer && (
             <div className="quoteView">
               <b>{item.quotation.insurer}</b>
-              {" · "}Indicative premium: {item.quotation.indicativePremium || "Not provided"}
-              {" · "}Limit: {item.quotation.coverageLimit || "Not provided"}
+
+              {" · "}Indicative premium:{" "}
+              {item.quotation.indicativePremium ||
+                "Not provided"}
+
+              {" · "}Limit:{" "}
+              {item.quotation.coverageLimit ||
+                "Not provided"}
+
               <p>{item.quotation.terms}</p>
             </div>
           )}
@@ -665,13 +990,23 @@ function EnquiryList({
             <div className="brokerTools">
               <label>
                 Status
+
                 <select
                   value={item.status}
-                  onChange={(e) => updateStatus?.(item._id, e.target.value)}
+                  onChange={(e) =>
+                    updateStatus?.(
+                      item._id,
+                      e.target.value
+                    )
+                  }
                 >
                   <option value="submitted">Submitted</option>
-                  <option value="under_review">Under review</option>
-                  <option value="quote_ready">Quote ready</option>
+                  <option value="under_review">
+                    Under review
+                  </option>
+                  <option value="quote_ready">
+                    Quote ready
+                  </option>
                   <option value="closed">Closed</option>
                 </select>
               </label>
@@ -685,42 +1020,59 @@ function EnquiryList({
                       ...quote,
                       [item._id]: {
                         insurer: e.target.value,
-                        indicativePremium: quote?.[item._id]?.indicativePremium || "",
-                        coverageLimit: quote?.[item._id]?.coverageLimit || "",
-                        terms: quote?.[item._id]?.terms || ""
-                      }
+                        indicativePremium:
+                          quote?.[item._id]
+                            ?.indicativePremium || "",
+                        coverageLimit:
+                          quote?.[item._id]
+                            ?.coverageLimit || "",
+                        terms:
+                          quote?.[item._id]?.terms || "",
+                      },
                     })
                   }
                 />
 
                 <input
                   placeholder="Indicative premium"
-                  value={quote?.[item._id]?.indicativePremium || ""}
+                  value={
+                    quote?.[item._id]?.indicativePremium || ""
+                  }
                   onChange={(e) =>
                     setQuote?.({
                       ...quote,
                       [item._id]: {
-                        insurer: quote?.[item._id]?.insurer || "",
+                        insurer:
+                          quote?.[item._id]?.insurer || "",
                         indicativePremium: e.target.value,
-                        coverageLimit: quote?.[item._id]?.coverageLimit || "",
-                        terms: quote?.[item._id]?.terms || ""
-                      }
+                        coverageLimit:
+                          quote?.[item._id]
+                            ?.coverageLimit || "",
+                        terms:
+                          quote?.[item._id]?.terms || "",
+                      },
                     })
                   }
                 />
 
                 <input
                   placeholder="Coverage limit"
-                  value={quote?.[item._id]?.coverageLimit || ""}
+                  value={
+                    quote?.[item._id]?.coverageLimit || ""
+                  }
                   onChange={(e) =>
                     setQuote?.({
                       ...quote,
                       [item._id]: {
-                        insurer: quote?.[item._id]?.insurer || "",
-                        indicativePremium: quote?.[item._id]?.indicativePremium || "",
+                        insurer:
+                          quote?.[item._id]?.insurer || "",
+                        indicativePremium:
+                          quote?.[item._id]
+                            ?.indicativePremium || "",
                         coverageLimit: e.target.value,
-                        terms: quote?.[item._id]?.terms || ""
-                      }
+                        terms:
+                          quote?.[item._id]?.terms || "",
+                      },
                     })
                   }
                 />
@@ -732,11 +1084,16 @@ function EnquiryList({
                     setQuote?.({
                       ...quote,
                       [item._id]: {
-                        insurer: quote?.[item._id]?.insurer || "",
-                        indicativePremium: quote?.[item._id]?.indicativePremium || "",
-                        coverageLimit: quote?.[item._id]?.coverageLimit || "",
-                        terms: e.target.value
-                      }
+                        insurer:
+                          quote?.[item._id]?.insurer || "",
+                        indicativePremium:
+                          quote?.[item._id]
+                            ?.indicativePremium || "",
+                        coverageLimit:
+                          quote?.[item._id]
+                            ?.coverageLimit || "",
+                        terms: e.target.value,
+                      },
                     })
                   }
                 />
