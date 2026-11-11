@@ -10,6 +10,7 @@ const path = require("path");
 const authRoutes = require("./routes/auth.routes");
 const enquiryRoutes = require("./routes/enquiry.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
+const adminRoutes = require("./routes/admin.routes");
 const uploadRoutes = require("./routes/upload.routes");
 
 const app = express();
@@ -24,6 +25,7 @@ app.get("/api/health", (_req, res) => res.json({ status: "ok", service: "commerc
 app.use("/api/auth", authRoutes);
 app.use("/api/enquiries", enquiryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/uploads", uploadRoutes);
 
 app.use((err, _req, res, _next) => {
