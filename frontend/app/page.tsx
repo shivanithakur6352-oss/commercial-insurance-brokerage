@@ -50,6 +50,12 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [summary, setSummary] =
+    const [adminOverview, setAdminOverview] =
+  useState<Record<string, number> | null>(null);
+
+const [adminUsers, setAdminUsers] = useState<any[]>([]);
+const [adminQuotations, setAdminQuotations] = useState<Enquiry[]>([]);
+const [adminTab, setAdminTab] = useState("overview");
     useState<Record<string, number> | null>(null);
 
   const [authForm, setAuthForm] = useState({
@@ -100,49 +106,71 @@ export default function Home() {
   }
 
   async function loadDashboard(t = token, u = user) {
-    if (!t || !u) return;
+  if (!t || !u) return;
 
-    try {
-      const headers = {
-        Authorization: `Bearer ${t}`,
-      };
+  try {
+    const headers = {
+      Authorization: `Bearer ${t}`,
+    };
 
-      if (u.role === "customer") {
-        const response = await fetch(`${API}/enquiries/mine`, {
-          headers,
-        });
+    if (u.role === "customer") {
+      const response = await fetch(`${API}/enquiries/mine`, {
+        headers,
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (response.ok) {
-          setEnquiries(data.enquiries || []);
-        }
-      } else {
-        const [response, summaryResponse] = await Promise.all([
-          fetch(`${API}/enquiries`, { headers }),
-          fetch(`${API}/dashboard/summary`, { headers }),
+      if (!response.ok) throw new Error(data.message);
+
+      setEnquiries(data.enquiries || []);
+    } 
+
+    else if (u.role === "broker") {
+      const [response, summaryResponse] = await Promise.all([
+        fetch(`${API}/enquiries`, { headers }),
+        fetch(`${API}/dashboard/summary`, { headers }),
+      ]);
+
+      const data = await response.json();
+      const summaryData = await summaryResponse.json();
+
+      if (!response.ok) throw new Error(data.message);
+      if (!summaryResponse.ok) throw new Error(summaryData.message);
+
+      setEnquiries(data.enquiries || []);
+      setSummary(summaryData);
+    } 
+
+    else if (u.role === "admin") {
+      const [overviewRes, usersRes, enquiriesRes, quotationsRes] =
+        await Promise.all([
+          fetch(`${API}/admin/overview`, { headers }),
+          fetch(`${API}/admin/users`, { headers }),
+          fetch(`${API}/admin/enquiries`, { headers }),
+          fetch(`${API}/admin/quotations`, { headers }),
         ]);
 
-        const data = await response.json();
-        const summaryData = await summaryResponse.json();
+      const overview = await overviewRes.json();
+      const users = await usersRes.json();
+      const enquiries = await enquiriesRes.json();
+      const quotations = await quotationsRes.json();
 
-        if (response.ok) {
-          setEnquiries(data.enquiries || []);
-        }
+      if (!overviewRes.ok) throw new Error(overview.message);
+      if (!usersRes.ok) throw new Error(users.message);
+      if (!enquiriesRes.ok) throw new Error(enquiries.message);
+      if (!quotationsRes.ok) throw new Error(quotations.message);
 
-        if (summaryResponse.ok) {
-          setSummary(summaryData);
-        }
-      }
-    } catch (e) {
-      setMessage(
-        e instanceof Error
-          ? e.message
-          : "Could not load dashboard"
-      );
+      setAdminOverview(overview);
+      setAdminUsers(users.users || []);
+      setEnquiries(enquiries.enquiries || []);
+      setAdminQuotations(quotations.quotations || []);
     }
+  } catch (e) {
+    setMessage(
+      e instanceof Error ? e.message : "Could not load dashboard"
+    );
   }
-
+}
   useEffect(() => {
     const saved = localStorage.getItem("coverbridge_token");
     const savedUser = localStorage.getItem("coverbridge_user");
