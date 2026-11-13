@@ -49,15 +49,15 @@ export default function Home() {
 
   const [message, setMessage] = useState("");
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
-  const [summary, setSummary] =
-    const [adminOverview, setAdminOverview] =
+const [summary, setSummary] =
+  useState<Record<string, number> | null>(null);
+
+const [adminOverview, setAdminOverview] =
   useState<Record<string, number> | null>(null);
 
 const [adminUsers, setAdminUsers] = useState<any[]>([]);
 const [adminQuotations, setAdminQuotations] = useState<Enquiry[]>([]);
 const [adminTab, setAdminTab] = useState("overview");
-    useState<Record<string, number> | null>(null);
-
   const [authForm, setAuthForm] = useState({
     name: "",
     email: "",
