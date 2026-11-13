@@ -356,3 +356,43 @@
     padding: 45px 20px;
   }
 }
+
+/* ADMIN DASHBOARD */
+
+.adminTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.adminTabs button {
+  width: auto;
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+.adminTabs .outline:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.adminTabs .primary {
+  background: var(--blue);
+  color: white;
+}
+
+@media (max-width: 600px) {
+  .adminTabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .adminTabs button {
+    width: 100%;
+  }
+}
+
