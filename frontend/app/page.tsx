@@ -894,27 +894,22 @@ const [adminTab, setAdminTab] = useState("overview");
         </section>
       )}
 
-      {user.role !== "customer" && (
+            
+      {user.role === "broker" && (
         <>
           <section className="stats">
-            {Object.entries(summary || {}).map(
-              ([key, value]) => (
-                <div className="stat panel" key={key}>
-                  <span>
-                    {key.replace(/[A-Z]/g, " $&")}
-                  </span>
-
-                  <strong>{value}</strong>
-                </div>
-              )
-            )}
+            {Object.entries(summary || {}).map(([key, value]) => (
+              <div className="stat panel" key={key}>
+                <span>{key.replace(/[A-Z]/g, " $&")}</span>
+                <strong>{value}</strong>
+              </div>
+            ))}
           </section>
 
           <section className="panel">
             <h2>Enquiry pipeline</h2>
-
             <p className="muted">
-              Review requests and manage broker responses.
+              Review customer requests and manage broker responses.
             </p>
 
             <EnquiryList
@@ -928,6 +923,131 @@ const [adminTab, setAdminTab] = useState("overview");
           </section>
         </>
       )}
+
+      {user.role === "admin" && (
+        <>
+          <section className="panel">
+            <h2>Admin Control Center</h2>
+            <p className="muted">
+              Monitor users, customers, brokers, enquiries and quotations.
+            </p>
+
+            <div className="adminTabs">
+              {[
+                { id: "overview", label: "Overview" },
+                { id: "users", label: "All Users" },
+                { id: "customers", label: "Customers" },
+                { id: "brokers", label: "Brokers" },
+                { id: "enquiries", label: "Enquiries" },
+                { id: "quotations", label: "Quotations" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={adminTab === tab.id ? "primary small" : "outline"}
+                  onClick={() => setAdminTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {adminTab === "overview" && (
+            <>
+              <section className="stats">
+                {Object.entries(adminOverview || {}).map(([key, value]) => (
+                  <div className="stat panel" key={key}>
+                    <span>{key.replace(/[A-Z]/g, " $&")}</span>
+                    <strong>{value}</strong>
+                  </div>
+                ))}
+              </section>
+
+              <section className="panel">
+                <h2>Recent Enquiries</h2>
+                <EnquiryList items={enquiries.slice(0, 5)} />
+              </section>
+            </>
+          )}
+
+          {adminTab === "users" && (
+            <section className="panel">
+              <h2>All Registered Users</h2>
+              <p className="muted">Complete list of platform accounts.</p>
+
+              {adminUsers.length === 0 ? (
+                <p className="empty">No users found.</p>
+              ) : (
+                <div className="enquiryList">
+                  {adminUsers.map((person) => (
+                    <article className="enquiry" key={person._id || person.id}>
+                      <h3>{person.name}</h3>
+                      <p className="muted">{person.email}</p>
+                      <p>Role: <strong>{person.role}</strong></p>
+                      <p>Company: {person.companyName || "Not provided"}</p>
+                      <p>Phone: {person.phone || "Not provided"}</p>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {adminTab === "customers" && (
+            <section className="panel">
+              <h2>Customers</h2>
+              <div className="enquiryList">
+                {adminUsers.filter((person) => person.role === "customer").map((person) => (
+                  <article className="enquiry" key={person._id || person.id}>
+                    <h3>{person.name}</h3>
+                    <p className="muted">{person.email}</p>
+                    <p>Company: {person.companyName || "Not provided"}</p>
+                    <p>Phone: {person.phone || "Not provided"}</p>
+                  </article>
+                ))}
+                {adminUsers.filter((person) => person.role === "customer").length === 0 && (
+                  <p className="empty">No customers found.</p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {adminTab === "brokers" && (
+            <section className="panel">
+              <h2>Registered Brokers</h2>
+              <div className="enquiryList">
+                {adminUsers.filter((person) => person.role === "broker").map((person) => (
+                  <article className="enquiry" key={person._id || person.id}>
+                    <h3>{person.name}</h3>
+                    <p className="muted">{person.email}</p>
+                    <p>Company: {person.companyName || "Not provided"}</p>
+                    <p>Phone: {person.phone || "Not provided"}</p>
+                  </article>
+                ))}
+                {adminUsers.filter((person) => person.role === "broker").length === 0 && (
+                  <p className="empty">No brokers found.</p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {adminTab === "enquiries" && (
+            <section className="panel">
+              <h2>All Customer Enquiries</h2>
+              <EnquiryList items={enquiries} />
+            </section>
+          )}
+
+          {adminTab === "quotations" && (
+            <section className="panel">
+              <h2>All Quotations</h2>
+              <EnquiryList items={adminQuotations} />
+            </section>
+          )}
+        </>
+      )}
+
 
       <footer>
         CoverBridge MVP · For broker-assisted enquiries only ·
