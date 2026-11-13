@@ -11,7 +11,6 @@ const path = require("path");
 const authRoutes = require("./routes/auth.routes");
 const enquiryRoutes = require("./routes/enquiry.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
-const adminRoutes = require("./routes/admin.routes");
 const uploadRoutes = require("./routes/upload.routes");
 
 const app = express();
