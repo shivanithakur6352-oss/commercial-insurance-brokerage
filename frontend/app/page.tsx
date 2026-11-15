@@ -45,6 +45,9 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
 
   const [mode, setMode] = useState<"login" | "register">("register");
+  const [selectedPortal, setSelectedPortal] = useState<
+  "customer" | "broker" | "admin"
+>("customer");
   const [showAuth, setShowAuth] = useState(false);
 
   const [message, setMessage] = useState("");
