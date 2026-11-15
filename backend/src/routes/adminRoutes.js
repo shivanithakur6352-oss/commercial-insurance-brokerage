@@ -97,4 +97,45 @@ router.get("/quotations", auth, allow("admin"), async (_req, res, next) => {
   }
 });
 
+ 
+// Update a user's role. Admins cannot change their own role.
+router.patch("/users/:id/role", auth, allow("admin"), async (req, res, next) => {
+  try {
+    const { role } = req.body;
+    const allowedRoles = ["customer", "broker", "admin"];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ message: "Invalid user role" });
+    }
+    if (req.params.id === String(req.user._id)) {
+      return res.status(400).json({ message: "You cannot change your own role" });
+    }
+
+    const target = await User.findById(req.params.id);
+    if (!target) return res.status(404).json({ message: "User not found" });
+
+    if (target.role === "admin" && role !== "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+      if (adminCount <= 1) {
+        return res.status(400).json({ message: "The last admin account cannot be demoted" });
+      }
+    }
+
+    target.role = role;
+    await target.save();
+    res.json({
+      message: "User role updated successfully",
+      user: {
+        _id: target._id,
+        name: target.name,
+        email: target.email,
+        role: target.role,
+        companyName: target.companyName,
+        phone: target.phone
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
