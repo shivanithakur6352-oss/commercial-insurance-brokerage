@@ -409,28 +409,7 @@ if (data.user.role !== selectedPortal) {
   </button>
 </div>
 
-            <div className="landingActions">
-              <button
-                className="primary"
-                onClick={() => {
-                  setMode("register");
-                  setShowAuth(true);
-                }}
-              >
-                Get Started →
-              </button>
-
-              <button
-                className="outline"
-                onClick={() => {
-                  setMode("login");
-                  setShowAuth(true);
-                }}
-              >
-                Existing Customer? Sign In
-              </button>
-            </div>
-
+            
             <div className="heroTags">
               <span>D&O Insurance</span>
               <span>Cyber Liability</span>
