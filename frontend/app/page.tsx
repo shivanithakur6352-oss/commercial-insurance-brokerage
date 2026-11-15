@@ -371,6 +371,43 @@ if (data.user.role !== selectedPortal) {
               broker assistance. Submit your requirements, track
               enquiries and receive quotations in one place.
             </p>
+           
+<div className="portalSelection">
+  <h2>Choose Your Portal</h2>
+
+  <button
+    className="primary"
+    onClick={() => {
+      setSelectedPortal("customer");
+      setMode("login");
+      setShowAuth(true);
+    }}
+  >
+    Customer Login
+  </button>
+
+  <button
+    className="outline"
+    onClick={() => {
+      setSelectedPortal("broker");
+      setMode("login");
+      setShowAuth(true);
+    }}
+  >
+    Broker Login
+  </button>
+
+  <button
+    className="outline"
+    onClick={() => {
+      setSelectedPortal("admin");
+      setMode("login");
+      setShowAuth(true);
+    }}
+  >
+    Admin Login
+  </button>
+</div>
 
             <div className="landingActions">
               <button
