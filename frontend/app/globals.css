@@ -396,3 +396,54 @@
   }
 }
 
+
+/* PROFESSIONAL PORTAL SELECTION */
+
+.portalSelection {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 680px;
+  margin: 32px 0 12px;
+}
+
+.portalSelection h2 {
+  grid-column: 1 / -1;
+  font-size: 22px;
+  font-weight: 800;
+  color: #17233b;
+  margin-bottom: 8px;
+}
+
+.portalSelection button {
+  width: 100%;
+  min-height: 64px;
+  margin: 0;
+  padding: 12px 10px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 750;
+  transition: all 0.2s ease;
+}
+
+.portalSelection button.primary {
+  background: linear-gradient(135deg, #2457d6, #397eea);
+  box-shadow: 0 8px 20px rgba(36, 87, 214, 0.2);
+}
+
+.portalSelection button.outline {
+  background: white;
+  border: 1px solid #d8e2f1;
+  color: #243b62;
+}
+
+.portalSelection button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(35, 70, 130, 0.13);
+}
+
+@media (max-width: 650px) {
+  .portalSelection {
+    grid-template-columns: 1fr;
+  }
+}
