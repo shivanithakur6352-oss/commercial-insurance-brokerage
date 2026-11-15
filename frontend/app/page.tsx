@@ -393,11 +393,7 @@ if (data.user.role !== selectedPortal) {
 
   <button
     className="outline"
-    onClick={() => {
-      setSelectedPortal("admin");
-      setMode("login");
-      setShowAuth(true);
-    }}
+   onClick={() => router.push("/admin/login")}
   >
     Admin Login
   </button>
