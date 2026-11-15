@@ -236,6 +236,23 @@ if (data.user.role !== selectedPortal) {
     }
   }
 
+  async function updateUserRole(userId: string, role: User["role"]) {
+    try {
+      const data = await request("/admin/users/" + userId + "/role", {
+        method: "PATCH",
+        body: JSON.stringify({ role }),
+      });
+      setAdminUsers((current) =>
+        current.map((person) =>
+          (person._id || person.id) === userId ? data.user : person
+        )
+      );
+      setMessage("User role updated successfully.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not update user role");
+    }
+  }
+
   async function createEnquiry(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
@@ -1005,6 +1022,18 @@ if (data.user.role !== selectedPortal) {
                       <p>Role: <strong>{person.role}</strong></p>
                       <p>Company: {person.companyName || "Not provided"}</p>
                       <p>Phone: {person.phone || "Not provided"}</p>
+                      <label>
+                        Account role
+                        <select
+                          value={person.role}
+                          disabled={(person._id || person.id) === user.id}
+                          onChange={(e) => updateUserRole(person._id || person.id, e.target.value as User["role"])}
+                        >
+                          <option value="customer">Customer</option>
+                          <option value="broker">Broker</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </label>
                     </article>
                   ))}
                 </div>
