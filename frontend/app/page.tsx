@@ -616,11 +616,12 @@ if (data.user.role !== selectedPortal) {
             ← Back to Home
           </button>
 
-          <h2>
-            {mode === "register"
-              ? "Create business account"
-              : "Welcome back"}
-          </h2>
+          
+<h2>
+  {mode === "register"
+    ? "Create Customer Account"
+    : `${selectedPortal.charAt(0).toUpperCase() + selectedPortal.slice(1)} Login`}
+</h2>
 
           <p className="muted">
             Access your commercial insurance workspace.
