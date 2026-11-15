@@ -205,6 +205,12 @@ const [adminTab, setAdminTab] = useState("overview");
         },
         ""
       );
+       
+if (data.user.role !== selectedPortal) {
+  throw new Error(
+    `This account is not registered as ${selectedPortal}. Please use the correct portal.`
+  );
+}
 
       setToken(data.token);
       setUser(data.user);
