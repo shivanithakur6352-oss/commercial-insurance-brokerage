@@ -379,11 +379,7 @@ if (data.user.role !== selectedPortal) {
 
   <button
     className="primary"
-    onClick={() => {
-      setSelectedPortal("customer");
-      setMode("login");
-      setShowAuth(true);
-    }}
+    onClick={() => router.push("/customer/login")}
   >
     Customer Login
   </button>
