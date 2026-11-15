@@ -242,11 +242,25 @@ if (data.user.role !== selectedPortal) {
         method: "PATCH",
         body: JSON.stringify({ role }),
       });
+      const previousUser = adminUsers.find(
+        (person) => String(person._id || person.id) === String(userId)
+      );
       setAdminUsers((current) =>
         current.map((person) =>
-          (person._id || person.id) === userId ? data.user : person
+          String(person._id || person.id) === String(userId) ? data.user : person
         )
       );
+      if (previousUser) {
+        setAdminOverview((current) => {
+          if (!current) return current;
+          const next = { ...current };
+          if (previousUser.role === "customer") next.customers = Math.max(0, (next.customers || 0) - 1);
+          if (previousUser.role === "broker") next.brokers = Math.max(0, (next.brokers || 0) - 1);
+          if (role === "customer") next.customers = (next.customers || 0) + 1;
+          if (role === "broker") next.brokers = (next.brokers || 0) + 1;
+          return next;
+        });
+      }
       setMessage("User role updated successfully.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not update user role");
@@ -1026,7 +1040,7 @@ if (data.user.role !== selectedPortal) {
                         Account role
                         <select
                           value={person.role}
-                          disabled={(person._id || person.id) === user.id}
+                          disabled={String(person._id || person.id) === String(user.id)}
                           onChange={(e) => updateUserRole(person._id || person.id, e.target.value as User["role"])}
                         >
                           <option value="customer">Customer</option>
