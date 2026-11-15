@@ -42,6 +42,7 @@ type Quote = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [user, setUser] = useState<User | null>(null);
 
