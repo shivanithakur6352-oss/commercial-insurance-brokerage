@@ -595,42 +595,7 @@ if (data.user.role !== selectedPortal) {
             Liability and Key-Person insurance support from a broker.
           </p>
 
-<div className="portalSelection">
-  <h2>Choose Your Portal</h2>
 
-  <button
-    className="primary"
-    onClick={() => {
-      setSelectedPortal("customer");
-      setMode("login");
-      setShowAuth(true);
-    }}
-  >
-    Customer Login
-  </button>
-
-  <button
-    className="outline"
-    onClick={() => {
-      setSelectedPortal("broker");
-      setMode("login");
-      setShowAuth(true);
-    }}
-  >
-    Broker Login
-  </button>
-
-  <button
-    className="outline"
-    onClick={() => {
-      setSelectedPortal("admin");
-      setMode("login");
-      setShowAuth(true);
-    }}
-  >
-    Admin Login
-  </button>
-</div>
 
           <div className="heroTags">
             <span>D&O</span>
