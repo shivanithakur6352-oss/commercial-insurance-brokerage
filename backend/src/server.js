@@ -18,7 +18,7 @@ app.use(helmet());
 const allowedOrigins = new Set(
   (process.env.CLIENT_URL || "http://localhost:3000")
     .split(",")
-    .map((origin) => origin.trim().replace(/\\/$/, ""))
+    .map((origin) => origin.trim().replace(/\/$/, ""))
     .filter(Boolean)
 );
 
@@ -27,7 +27,7 @@ const isAllowedOrigin = (origin) => {
   if (allowedOrigins.has(origin)) return true;
 
   // Allow this project's Vercel Preview deployments, but not arbitrary domains.
-  return /^https:\\/\\/commercial-insurance-brokerage(?:-[a-z0-9-]+)?-shivani-ed7a\\.vercel\\.app$/.test(origin);
+  return /^https:\/\/commercial-insurance-brokerage(?:-[a-z0-9-]+)?-shivani-ed7a\.vercel\.app$/.test(origin);
 };
 
 app.use(cors({
