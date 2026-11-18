@@ -64,6 +64,7 @@ const [adminOverview, setAdminOverview] =
 
 const [adminUsers, setAdminUsers] = useState<any[]>([]);
 const [adminQuotations, setAdminQuotations] = useState<Enquiry[]>([]);
+const [adminRiskPassports, setAdminRiskPassports] = useState<any>(null);
 const [adminTab, setAdminTab] = useState("overview");
   const [authForm, setAuthForm] = useState({
     name: "",
@@ -149,28 +150,32 @@ const [adminTab, setAdminTab] = useState("overview");
     } 
 
     else if (u.role === "admin") {
-      const [overviewRes, usersRes, enquiriesRes, quotationsRes] =
+      const [overviewRes, usersRes, enquiriesRes, quotationsRes, riskPassportsRes] =
         await Promise.all([
           fetch(`${API}/admin/overview`, { headers }),
           fetch(`${API}/admin/users`, { headers }),
           fetch(`${API}/admin/enquiries`, { headers }),
           fetch(`${API}/admin/quotations`, { headers }),
+          fetch(`${API}/admin/risk-passports`, { headers }),
         ]);
 
       const overview = await overviewRes.json();
       const users = await usersRes.json();
       const enquiries = await enquiriesRes.json();
       const quotations = await quotationsRes.json();
+      const riskPassports = await riskPassportsRes.json();
 
       if (!overviewRes.ok) throw new Error(overview.message);
       if (!usersRes.ok) throw new Error(users.message);
       if (!enquiriesRes.ok) throw new Error(enquiries.message);
       if (!quotationsRes.ok) throw new Error(quotations.message);
+      if (!riskPassportsRes.ok) throw new Error(riskPassports.message);
 
       setAdminOverview(overview);
       setAdminUsers(users.users || []);
       setEnquiries(enquiries.enquiries || []);
       setAdminQuotations(quotations.quotations || []);
+      setAdminRiskPassports(riskPassports);
     }
   } catch (e) {
     setMessage(
@@ -1034,6 +1039,7 @@ if (data.user.role !== selectedPortal) {
                 { id: "brokers", label: "Brokers" },
                 { id: "enquiries", label: "Enquiries" },
                 { id: "quotations", label: "Quotations" },
+                { id: "risk-passports", label: "Risk Passports" },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1108,6 +1114,33 @@ if (data.user.role !== selectedPortal) {
             <section className="panel">
               <h2>All Customer Enquiries</h2>
               <EnquiryList items={enquiries} broker quote={quote} setQuote={setQuote} updateStatus={updateStatus} saveQuote={saveQuote} />
+            </section>
+          )}
+
+          {adminTab === "risk-passports" && (
+            <section className="panel">
+              <h2>Business Risk Passport Insights</h2>
+              <p className="muted">Customer preparedness snapshots. Scores are self-reported checklist indicators, not underwriting decisions.</p>
+              <section className="stats">
+                <div className="stat panel"><span>Saved profiles</span><strong>{adminRiskPassports?.total ?? 0}</strong></div>
+                <div className="stat panel"><span>Average readiness</span><strong>{adminRiskPassports?.averageScore ?? 0}/100</strong></div>
+                <div className="stat panel"><span>Cyber Liability topics</span><strong>{adminRiskPassports?.byRecommendation?.cyberLiability ?? 0}</strong></div>
+                <div className="stat panel"><span>D&O topics</span><strong>{adminRiskPassports?.byRecommendation?.directorsAndOfficers ?? 0}</strong></div>
+                <div className="stat panel"><span>Key-Person topics</span><strong>{adminRiskPassports?.byRecommendation?.keyPerson ?? 0}</strong></div>
+              </section>
+              {(adminRiskPassports?.passports || []).length === 0 ? <p className="empty">No customer Risk Passports saved yet.</p> : (
+                <div className="enquiryList">
+                  {adminRiskPassports.passports.map((passport: any) => (
+                    <article className="enquiry" key={passport._id}>
+                      <h3>{passport.customer?.companyName || passport.customer?.name || "Customer"}</h3>
+                      <p className="muted">{passport.customer?.email || ""} · {passport.companyType}</p>
+                      <p>Readiness score: <strong>{passport.score}/100</strong></p>
+                      <p>Topics to discuss: {(passport.recommendations || []).join(", ") || "None"}</p>
+                      <p className="muted">Last updated: {new Date(passport.updatedAt).toLocaleString()}</p>
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
