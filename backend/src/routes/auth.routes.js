@@ -116,6 +116,10 @@ router.post("/forgot-password", async (req, res, next) => {
     const rawToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     const resetUrl = `${process.env.CLIENT_URL.replace(/\/$/, "")}/?resetToken=${rawToken}`;
+    user.passwordResetTokenHash = tokenHash;
+    user.passwordResetExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await user.save();
+
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
@@ -128,11 +132,11 @@ router.post("/forgot-password", async (req, res, next) => {
     });
     if (!emailResponse.ok) {
       console.error("Password reset email provider error:", await emailResponse.text());
+      user.passwordResetTokenHash = undefined;
+      user.passwordResetExpiresAt = undefined;
+      await user.save();
       return res.status(502).json({ message: "Could not send the reset email. Please try again later." });
     }
-    user.passwordResetTokenHash = tokenHash;
-    user.passwordResetExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
-    await user.save();
     return res.json({ message: genericMessage });
   } catch (error) { next(error); }
 });
