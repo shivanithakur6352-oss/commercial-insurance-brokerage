@@ -997,6 +997,7 @@ if (data.user.role !== selectedPortal) {
             <EnquiryList items={enquiries} />
           </section>
         </section>
+        </>
       )}
 
             
