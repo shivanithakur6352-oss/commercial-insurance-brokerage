@@ -15,7 +15,27 @@ const uploadRoutes = require("./routes/upload.routes");
 
 const app = express();
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:3000" }));
+const allowedOrigins = new Set(
+  (process.env.CLIENT_URL || "http://localhost:3000")
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter(Boolean)
+);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // Allow server-to-server and health-check requests.
+  if (allowedOrigins.has(origin)) return true;
+
+  // Allow this project's Vercel Preview deployments, but not arbitrary domains.
+  return /^https:\/\/commercial-insurance-brokerage(?:-[a-z0-9-]+)?-shivani-ed7a\.vercel\.app$/.test(origin);
+};
+
+app.use(cors({
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  }
+}));
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }));

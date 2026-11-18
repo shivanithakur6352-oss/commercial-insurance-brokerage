@@ -49,6 +49,10 @@ export default function Home() {
   "customer" | "broker" | "admin"
 >("customer");
   const [showAuth, setShowAuth] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState<"forgot" | "reset" | null>(null);
+  const [resetToken, setResetToken] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   const [message, setMessage] = useState("");
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
@@ -175,6 +179,20 @@ const [adminTab, setAdminTab] = useState("overview");
   }
 }
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reset = params.get("resetToken");
+    if (reset) {
+      localStorage.removeItem("coverbridge_token");
+      localStorage.removeItem("coverbridge_user");
+      setToken("");
+      setUser(null);
+      setResetToken(reset);
+      setRecoveryMode("reset");
+      setMode("login");
+      setShowAuth(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
     const saved = localStorage.getItem("coverbridge_token");
     const savedUser = localStorage.getItem("coverbridge_user");
 
@@ -191,6 +209,23 @@ const [adminTab, setAdminTab] = useState("overview");
       }
     }
   }, []);
+
+  async function requestPasswordReset(e: React.FormEvent) {
+    e.preventDefault(); setMessage("");
+    try {
+      const data = await request("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email: recoveryEmail }) }, "");
+      setMessage(data.message || "If an account exists, a reset link will be sent.");
+    } catch (e) { setMessage(e instanceof Error ? e.message : "Could not request password reset"); }
+  }
+
+  async function submitNewPassword(e: React.FormEvent) {
+    e.preventDefault(); setMessage("");
+    try {
+      const data = await request("/auth/reset-password", { method: "POST", body: JSON.stringify({ token: resetToken, password: newPassword }) }, "");
+      setMessage(data.message || "Password updated. Please sign in.");
+      setRecoveryMode(null); setResetToken(""); setNewPassword(""); setMode("login");
+    } catch (e) { setMessage(e instanceof Error ? e.message : "Could not reset password"); }
+  }
 
   async function authenticate(e: React.FormEvent) {
     e.preventDefault();
@@ -231,6 +266,16 @@ if (data.user.role !== selectedPortal) {
           ? e.message
           : "Authentication failed"
       );
+    }
+  }
+
+  async function updateUserRole(userId: string, role: "customer" | "broker" | "admin") {
+    try {
+      await request(`/admin/users/${userId}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
+      setMessage("User role updated successfully.");
+      await loadDashboard();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not update user role");
     }
   }
 
@@ -604,6 +649,24 @@ if (data.user.role !== selectedPortal) {
           </div>
         </section>
 
+        {recoveryMode === "forgot" ? (
+          <form className="panel authPanel" onSubmit={requestPasswordReset}>
+            <button type="button" className="linkButton" onClick={() => { setRecoveryMode(null); setMessage(""); }}>← Back to login</button>
+            <h2>Forgot Password?</h2>
+            <p className="muted">Enter your registered email address. If an account exists, we'll send a secure reset link.</p>
+            <label>Email<input required type="email" value={recoveryEmail} onChange={(e) => setRecoveryEmail(e.target.value)} /></label>
+            <button className="primary">Send reset link</button>
+            {message && <p className="notice">{message}</p>}
+          </form>
+        ) : recoveryMode === "reset" ? (
+          <form className="panel authPanel" onSubmit={submitNewPassword}>
+            <h2>Set a new password</h2>
+            <p className="muted">Choose a new password with at least 8 characters.</p>
+            <label>New password<input required minLength={8} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
+            <button className="primary">Update password</button>
+            {message && <p className="notice">{message}</p>}
+          </form>
+        ) : (
         <form className="panel authPanel" onSubmit={authenticate}>
           <button
             type="button"
@@ -713,6 +776,8 @@ if (data.user.role !== selectedPortal) {
               : "Sign in"}
           </button>
 
+          {mode === "login" && <button type="button" className="linkButton" onClick={() => { setRecoveryEmail(authForm.email); setRecoveryMode("forgot"); setMessage(""); }}>Forgot password?</button>}
+
           <button
             type="button"
             className="linkButton"
@@ -731,6 +796,7 @@ if (data.user.role !== selectedPortal) {
             <p className="notice">{message}</p>
           )}
         </form>
+        )}
       </main>
     );
   }
@@ -1008,15 +1074,7 @@ if (data.user.role !== selectedPortal) {
                 <p className="empty">No users found.</p>
               ) : (
                 <div className="enquiryList">
-                  {adminUsers.map((person) => (
-                    <article className="enquiry" key={person._id || person.id}>
-                      <h3>{person.name}</h3>
-                      <p className="muted">{person.email}</p>
-                      <p>Role: <strong>{person.role}</strong></p>
-                      <p>Company: {person.companyName || "Not provided"}</p>
-                      <p>Phone: {person.phone || "Not provided"}</p>
-                    </article>
-                  ))}
+                  <AdminUserList users={adminUsers} currentUserId={user.id} onRoleChange={updateUserRole} />
                 </div>
               )}
             </section>
@@ -1026,14 +1084,7 @@ if (data.user.role !== selectedPortal) {
             <section className="panel">
               <h2>Customers</h2>
               <div className="enquiryList">
-                {adminUsers.filter((person) => person.role === "customer").map((person) => (
-                  <article className="enquiry" key={person._id || person.id}>
-                    <h3>{person.name}</h3>
-                    <p className="muted">{person.email}</p>
-                    <p>Company: {person.companyName || "Not provided"}</p>
-                    <p>Phone: {person.phone || "Not provided"}</p>
-                  </article>
-                ))}
+                <AdminUserList users={adminUsers.filter((person) => person.role === "customer")} currentUserId={user.id} onRoleChange={updateUserRole} />
                 {adminUsers.filter((person) => person.role === "customer").length === 0 && (
                   <p className="empty">No customers found.</p>
                 )}
@@ -1045,14 +1096,7 @@ if (data.user.role !== selectedPortal) {
             <section className="panel">
               <h2>Registered Brokers</h2>
               <div className="enquiryList">
-                {adminUsers.filter((person) => person.role === "broker").map((person) => (
-                  <article className="enquiry" key={person._id || person.id}>
-                    <h3>{person.name}</h3>
-                    <p className="muted">{person.email}</p>
-                    <p>Company: {person.companyName || "Not provided"}</p>
-                    <p>Phone: {person.phone || "Not provided"}</p>
-                  </article>
-                ))}
+                <AdminUserList users={adminUsers.filter((person) => person.role === "broker")} currentUserId={user.id} onRoleChange={updateUserRole} />
                 {adminUsers.filter((person) => person.role === "broker").length === 0 && (
                   <p className="empty">No brokers found.</p>
                 )}
@@ -1063,14 +1107,14 @@ if (data.user.role !== selectedPortal) {
           {adminTab === "enquiries" && (
             <section className="panel">
               <h2>All Customer Enquiries</h2>
-              <EnquiryList items={enquiries} />
+              <EnquiryList items={enquiries} broker quote={quote} setQuote={setQuote} updateStatus={updateStatus} saveQuote={saveQuote} />
             </section>
           )}
 
           {adminTab === "quotations" && (
             <section className="panel">
               <h2>All Quotations</h2>
-              <EnquiryList items={adminQuotations} />
+              <EnquiryList items={adminQuotations} broker quote={quote} setQuote={setQuote} updateStatus={updateStatus} saveQuote={saveQuote} />
             </section>
           )}
         </>
@@ -1082,6 +1126,33 @@ if (data.user.role !== selectedPortal) {
         Not an insurance policy or binding quote
       </footer>
     </main>
+  );
+}
+
+function AdminUserList({ users, currentUserId, onRoleChange }: {
+  users: any[];
+  currentUserId: string;
+  onRoleChange: (id: string, role: "customer" | "broker" | "admin") => void;
+}) {
+  if (!users.length) return <p className="empty">No users found.</p>;
+  return (
+    <div className="enquiryList">
+      {users.map((person) => (
+        <article className="enquiry" key={person._id || person.id}>
+          <h3>{person.name}</h3>
+          <p className="muted">{person.email}</p>
+          <p>Role: <strong>{person.role}</strong></p>
+          <p>Company: {person.companyName || "Not provided"}</p>
+          <p>Phone: {person.phone || "Not provided"}</p>
+          <label>Change account role
+            <select value={person.role} disabled={String(person._id || person.id) === String(currentUserId)}
+              onChange={(e) => onRoleChange(String(person._id || person.id), e.target.value as "customer" | "broker" | "admin")}>
+              <option value="customer">Customer</option><option value="broker">Broker</option><option value="admin">Admin</option>
+            </select>
+          </label>
+        </article>
+      ))}
+    </div>
   );
 }
 
