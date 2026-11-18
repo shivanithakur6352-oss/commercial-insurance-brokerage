@@ -182,6 +182,10 @@ const [adminTab, setAdminTab] = useState("overview");
     const params = new URLSearchParams(window.location.search);
     const reset = params.get("resetToken");
     if (reset) {
+      localStorage.removeItem("coverbridge_token");
+      localStorage.removeItem("coverbridge_user");
+      setToken("");
+      setUser(null);
       setResetToken(reset);
       setRecoveryMode("reset");
       setMode("login");
