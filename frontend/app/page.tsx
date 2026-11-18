@@ -234,6 +234,16 @@ if (data.user.role !== selectedPortal) {
     }
   }
 
+  async function updateUserRole(userId: string, role: "customer" | "broker" | "admin") {
+    try {
+      await request(`/admin/users/${userId}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
+      setMessage("User role updated successfully.");
+      await loadDashboard();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not update user role");
+    }
+  }
+
   async function createEnquiry(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
@@ -1008,15 +1018,7 @@ if (data.user.role !== selectedPortal) {
                 <p className="empty">No users found.</p>
               ) : (
                 <div className="enquiryList">
-                  {adminUsers.map((person) => (
-                    <article className="enquiry" key={person._id || person.id}>
-                      <h3>{person.name}</h3>
-                      <p className="muted">{person.email}</p>
-                      <p>Role: <strong>{person.role}</strong></p>
-                      <p>Company: {person.companyName || "Not provided"}</p>
-                      <p>Phone: {person.phone || "Not provided"}</p>
-                    </article>
-                  ))}
+                  <AdminUserList users={adminUsers} currentUserId={user.id} onRoleChange={updateUserRole} />
                 </div>
               )}
             </section>
@@ -1026,14 +1028,7 @@ if (data.user.role !== selectedPortal) {
             <section className="panel">
               <h2>Customers</h2>
               <div className="enquiryList">
-                {adminUsers.filter((person) => person.role === "customer").map((person) => (
-                  <article className="enquiry" key={person._id || person.id}>
-                    <h3>{person.name}</h3>
-                    <p className="muted">{person.email}</p>
-                    <p>Company: {person.companyName || "Not provided"}</p>
-                    <p>Phone: {person.phone || "Not provided"}</p>
-                  </article>
-                ))}
+                <AdminUserList users={adminUsers.filter((person) => person.role === "customer")} currentUserId={user.id} onRoleChange={updateUserRole} />
                 {adminUsers.filter((person) => person.role === "customer").length === 0 && (
                   <p className="empty">No customers found.</p>
                 )}
@@ -1045,14 +1040,7 @@ if (data.user.role !== selectedPortal) {
             <section className="panel">
               <h2>Registered Brokers</h2>
               <div className="enquiryList">
-                {adminUsers.filter((person) => person.role === "broker").map((person) => (
-                  <article className="enquiry" key={person._id || person.id}>
-                    <h3>{person.name}</h3>
-                    <p className="muted">{person.email}</p>
-                    <p>Company: {person.companyName || "Not provided"}</p>
-                    <p>Phone: {person.phone || "Not provided"}</p>
-                  </article>
-                ))}
+                <AdminUserList users={adminUsers.filter((person) => person.role === "broker")} currentUserId={user.id} onRoleChange={updateUserRole} />
                 {adminUsers.filter((person) => person.role === "broker").length === 0 && (
                   <p className="empty">No brokers found.</p>
                 )}
@@ -1063,14 +1051,14 @@ if (data.user.role !== selectedPortal) {
           {adminTab === "enquiries" && (
             <section className="panel">
               <h2>All Customer Enquiries</h2>
-              <EnquiryList items={enquiries} />
+              <EnquiryList items={enquiries} broker quote={quote} setQuote={setQuote} updateStatus={updateStatus} saveQuote={saveQuote} />
             </section>
           )}
 
           {adminTab === "quotations" && (
             <section className="panel">
               <h2>All Quotations</h2>
-              <EnquiryList items={adminQuotations} />
+              <EnquiryList items={adminQuotations} broker quote={quote} setQuote={setQuote} updateStatus={updateStatus} saveQuote={saveQuote} />
             </section>
           )}
         </>
@@ -1082,6 +1070,33 @@ if (data.user.role !== selectedPortal) {
         Not an insurance policy or binding quote
       </footer>
     </main>
+  );
+}
+
+function AdminUserList({ users, currentUserId, onRoleChange }: {
+  users: any[];
+  currentUserId: string;
+  onRoleChange: (id: string, role: "customer" | "broker" | "admin") => void;
+}) {
+  if (!users.length) return <p className="empty">No users found.</p>;
+  return (
+    <div className="enquiryList">
+      {users.map((person) => (
+        <article className="enquiry" key={person._id || person.id}>
+          <h3>{person.name}</h3>
+          <p className="muted">{person.email}</p>
+          <p>Role: <strong>{person.role}</strong></p>
+          <p>Company: {person.companyName || "Not provided"}</p>
+          <p>Phone: {person.phone || "Not provided"}</p>
+          <label>Change account role
+            <select value={person.role} disabled={String(person._id || person.id) === String(currentUserId)}
+              onChange={(e) => onRoleChange(String(person._id || person.id), e.target.value as "customer" | "broker" | "admin")}>
+              <option value="customer">Customer</option><option value="broker">Broker</option><option value="admin">Admin</option>
+            </select>
+          </label>
+        </article>
+      ))}
+    </div>
   );
 }
 
