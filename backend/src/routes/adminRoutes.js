@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const User = require("../models/User");
 const Enquiry = require("../models/Enquiry");
+const RiskPassport = require("../models/RiskPassport");
 const { auth, allow } = require("../middleware/auth");
 
 router.use(auth, allow("admin"));
@@ -101,6 +102,29 @@ router.get("/quotations", async (_req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+
+// Risk Passport insights for administrators
+router.get("/risk-passports", async (_req, res, next) => {
+  try {
+    const [total, profiles] = await Promise.all([
+      RiskPassport.countDocuments(),
+      RiskPassport.find()
+        .populate("customer", "name email companyName")
+        .sort({ updatedAt: -1 })
+        .lean()
+    ]);
+    const averageScore = total
+      ? Math.round(profiles.reduce((sum, item) => sum + item.score, 0) / total)
+      : 0;
+    const byRecommendation = {
+      cyberLiability: profiles.filter(item => item.recommendations.includes("Cyber Liability")).length,
+      directorsAndOfficers: profiles.filter(item => item.recommendations.includes("D&O")).length,
+      keyPerson: profiles.filter(item => item.recommendations.includes("Key-Person")).length
+    };
+    res.json({ total, averageScore, byRecommendation, passports: profiles });
+  } catch (error) { next(error); }
 });
 
 module.exports = router;
