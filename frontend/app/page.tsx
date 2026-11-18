@@ -857,6 +857,12 @@ if (data.user.role !== selectedPortal) {
       )}
 
       {user.role === "customer" && (
+        <>
+        <section className="panel">
+          <h2>Business Risk Passport</h2>
+          <p className="muted">Complete or update your saved business preparedness profile.</p>
+          <a className="outline" href="/risk-passport">Open Risk Passport</a>
+        </section>
         <section className="contentGrid">
           <form className="panel" onSubmit={createEnquiry}>
             <h2>Request insurance support</h2>
@@ -996,6 +1002,11 @@ if (data.user.role !== selectedPortal) {
             
       {user.role === "broker" && (
         <>
+          <section className="panel">
+            <h2>Customer Risk Passports</h2>
+            <p className="muted">Review saved customer preparedness snapshots.</p>
+            <a className="outline" href="/risk-passport">View Risk Passports</a>
+          </section>
           <section className="stats">
             {Object.entries(summary || {}).map(([key, value]) => (
               <div className="stat panel" key={key}>
