@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 const checks = [
   { id: "mfa", label: "Multi-factor authentication is enabled for important accounts", area: "Cyber Liability" },
   { id: "backup", label: "Critical business data is backed up and recovery is tested", area: "Cyber Liability" },
@@ -12,7 +13,8 @@ const checks = [
   { id: "keyperson", label: "We have identified roles where one person's absence could disrupt operations", area: "Key-Person" },
   { id: "continuity", label: "We have a continuity or succession plan for critical roles", area: "Key-Person" },
 ];
-
+const businessTypes = ["Technology / SaaS", "Professional services", "Manufacturing", "Healthcare", "Retail / E-commerce", "Financial services", "Other"];
+type Passport = { _id?: string; companyType: string; answers: string[]; score: number; recommendations: string[]; updatedAt?: string; customer?: { name?: string; email?: string; companyName?: string } };
 const styles: Record<string, React.CSSProperties> = {
   page: { minHeight: "100vh", background: "#f5f8fd", color: "#17243a", padding: "36px 18px", fontFamily: "Arial, sans-serif" },
   wrap: { maxWidth: 980, margin: "0 auto" },
@@ -33,18 +35,83 @@ export default function BusinessRiskPassport() {
   const [answers, setAnswers] = useState<string[]>([]);
   const [companyType, setCompanyType] = useState("Technology / SaaS");
   const [submitted, setSubmitted] = useState(false);
+  const [token, setToken] = useState("");
+  const [role, setRole] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [savedAt, setSavedAt] = useState("");
+  const [brokerPassports, setBrokerPassports] = useState<Passport[]>([]);
   const score = Math.round((answers.length / checks.length) * 100);
   const recommendations = useMemo(() => {
     const areas = new Set<string>();
-    if (!answers.includes("mfa") || !answers.includes("backup") || !answers.includes("response")) areas.add("Cyber Liability");
-    if (!answers.includes("governance") || !answers.includes("disclosures")) areas.add("D&O");
-    if (!answers.includes("keyperson") || !answers.includes("continuity")) areas.add("Key-Person");
+    if (!["mfa", "backup", "response"].every(id => answers.includes(id))) areas.add("Cyber Liability");
+    if (!["governance", "disclosures"].every(id => answers.includes(id))) areas.add("D&O");
+    if (!["keyperson", "continuity"].every(id => answers.includes(id))) areas.add("Key-Person");
     return Array.from(areas);
   }, [answers]);
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem("coverbridge_token") || "";
+    const savedUser = localStorage.getItem("coverbridge_user");
+    setToken(savedToken);
+    if (!savedToken || !savedUser) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const user = JSON.parse(savedUser);
+      setRole(user.role || "");
+      fetch(`${API}/risk-passport`, { headers: { Authorization: `Bearer ${savedToken}` } })
+        .then(async response => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || "Could not load Risk Passport.");
+          if (user.role === "customer" && data.passport) {
+            setCompanyType(data.passport.companyType);
+            setAnswers(data.passport.answers || []);
+            setSubmitted(true);
+            setSavedAt(data.passport.updatedAt || "");
+          } else if (user.role !== "customer") {
+            setBrokerPassports(data.passports || []);
+          }
+        })
+        .catch(error => setMessage(error instanceof Error ? error.message : "Could not load saved profile."))
+        .finally(() => setLoading(false));
+    } catch {
+      setMessage("Please sign in again to access your Risk Passport.");
+      setLoading(false);
+    }
+  }, []);
 
   function toggle(id: string) {
     setAnswers(current => current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
     setSubmitted(false);
+    setSavedAt("");
+    setMessage("");
+  }
+
+  async function savePassport() {
+    if (!token || role !== "customer") return;
+    setSaving(true);
+    setMessage("");
+    try {
+      const response = await fetch(`${API}/risk-passport`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ companyType, answers }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not save Risk Passport.");
+      setAnswers(data.passport.answers || []);
+      setCompanyType(data.passport.companyType);
+      setSubmitted(true);
+      setSavedAt(data.passport.updatedAt || new Date().toISOString());
+      setMessage(data.message || "Risk Passport saved securely.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save Risk Passport.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -54,7 +121,6 @@ export default function BusinessRiskPassport() {
           <Link href="/" style={styles.brand}>CoverBridge <span style={{ color: "#2457d6" }}> / Risk Passport</span></Link>
           <Link href="/" style={styles.outline}>Back to workspace</Link>
         </header>
-
         <section style={styles.panel}>
           <div style={styles.eyebrow}>COVERBRIDGE BUSINESS RISK PASSPORT</div>
           <h1 style={styles.heading}>Understand your business risk readiness.</h1>
@@ -62,45 +128,65 @@ export default function BusinessRiskPassport() {
           <p style={{ ...styles.muted, fontSize: 13, marginTop: 16 }}><strong>Important:</strong> This is an educational readiness indicator, not an insurance quote, underwriting decision, guarantee of cover or regulated insurance advice.</p>
         </section>
 
-        <section style={styles.panel}>
-          <h2 style={{ marginTop: 0 }}>1. Tell us about your business</h2>
-          <label style={{ display: "block", marginTop: 18, fontWeight: 700 }}>Business type</label>
-          <select value={companyType} onChange={e => setCompanyType(e.target.value)} style={{ width: "100%", maxWidth: 440, padding: 12, border: "1px solid #d8e2f1", borderRadius: 9, marginTop: 8 }}>
-            {["Technology / SaaS", "Professional services", "Manufacturing", "Healthcare", "Retail / E-commerce", "Financial services", "Other"].map(x => <option key={x}>{x}</option>)}
-          </select>
-        </section>
+        {!token && <section style={styles.panel}>
+          <h2>Sign in to save your Risk Passport</h2>
+          <p style={styles.muted}>Your completed assessment is stored against your customer account, so you can return to it later.</p>
+          <Link href="/" style={styles.outline}>Go to CoverBridge sign in</Link>
+        </section>}
 
-        <section style={styles.panel}>
-          <h2 style={{ marginTop: 0 }}>2. Business preparedness checklist</h2>
-          <p style={styles.muted}>Tick each statement that is currently true for your business.</p>
-          {checks.map(item => (
-            <label key={item.id} style={styles.item}>
+        {loading && <section style={styles.panel}>Loading your saved Risk Passport…</section>}
+
+        {token && role === "customer" && !loading && <>
+          <section style={styles.panel}>
+            <h2 style={{ marginTop: 0 }}>1. Tell us about your business</h2>
+            <label style={{ display: "block", marginTop: 18, fontWeight: 700 }}>Business type</label>
+            <select value={companyType} onChange={e => { setCompanyType(e.target.value); setSubmitted(false); setSavedAt(""); }} style={{ width: "100%", maxWidth: 440, padding: 12, border: "1px solid #d8e2f1", borderRadius: 9, marginTop: 8 }}>
+              {businessTypes.map(x => <option key={x}>{x}</option>)}
+            </select>
+          </section>
+          <section style={styles.panel}>
+            <h2 style={{ marginTop: 0 }}>2. Business preparedness checklist</h2>
+            <p style={styles.muted}>Tick each statement that is currently true for your business.</p>
+            {checks.map(item => <label key={item.id} style={styles.item}>
               <input type="checkbox" checked={answers.includes(item.id)} onChange={() => toggle(item.id)} style={{ width: 18, height: 18, marginTop: 2, accentColor: "#2457d6" }} />
               <span><strong>{item.label}</strong><small style={{ display: "block", color: "#77849a", marginTop: 5 }}>{item.area}</small></span>
-            </label>
-          ))}
-          <button type="button" style={{ ...styles.button, marginTop: 20 }} onClick={() => setSubmitted(true)}>Generate my Risk Passport</button>
-        </section>
+            </label>)}
+            <button type="button" style={{ ...styles.button, marginTop: 20 }} onClick={savePassport} disabled={saving}>{saving ? "Saving…" : "Generate & Save my Risk Passport"}</button>
+            {message && <p role="status" style={styles.muted}>{message}</p>}
+            {savedAt && <p style={{ ...styles.muted, fontSize: 12 }}>Last saved: {new Date(savedAt).toLocaleString()}</p>}
+          </section>
+          {submitted && <section style={styles.panel} aria-live="polite">
+            <div style={styles.eyebrow}>YOUR READINESS SNAPSHOT · {companyType}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap", margin: "18px 0" }}>
+              <div style={styles.score}>{score}<span style={{ fontSize: 20 }}>/100</span></div>
+              <div><h2 style={{ margin: "0 0 6px" }}>{score >= 80 ? "Strong preparation signals" : score >= 45 ? "Some preparation in place" : "More preparation recommended"}</h2><p style={styles.muted}>Based only on the checklist answers you selected.</p></div>
+            </div>
+            <div style={{ height: 12, background: "#eaf0f8", borderRadius: 20, overflow: "hidden" }}><div style={{ width: score + "%", height: "100%", background: "#2457d6", borderRadius: 20 }} /></div>
+            <h3 style={{ marginTop: 26 }}>Insurance topics to discuss with a broker</h3>
+            {recommendations.map(x => <span key={x} style={styles.tag}>{x}</span>)}
+            <p style={{ ...styles.muted, marginTop: 16 }}>These topics are matched to checklist gaps for discussion only. A broker or insurer must assess your circumstances, eligibility, policy wording, exclusions and limits.</p>
+            <h3 style={{ marginTop: 24 }}>Suggested next steps</h3>
+            <ul style={{ ...styles.muted, paddingLeft: 22, lineHeight: 1.9 }}>
+              {(!answers.includes("mfa") || !answers.includes("backup") || !answers.includes("response")) && <li>Review access controls, backups and incident response readiness.</li>}
+              {(!answers.includes("governance") || !answers.includes("disclosures")) && <li>Review director governance processes and keep company disclosures current.</li>}
+              {(!answers.includes("keyperson") || !answers.includes("continuity")) && <li>Identify critical roles and document a continuity or succession plan.</li>}
+              {answers.length === checks.length && <li>Keep evidence of these controls current and review the checklist periodically with your broker.</li>}
+            </ul>
+            <button type="button" style={styles.outline} onClick={() => window.print()}>Print / Save Risk Passport</button>
+          </section>}
+        </>}
 
-        {submitted && <section style={styles.panel} aria-live="polite">
-          <div style={styles.eyebrow}>YOUR READINESS SNAPSHOT · {companyType}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap", margin: "18px 0" }}>
-            <div style={styles.score}>{score}<span style={{ fontSize: 20 }}>/100</span></div>
-            <div><h2 style={{ margin: "0 0 6px" }}>{score >= 80 ? "Strong preparation signals" : score >= 45 ? "Some preparation in place" : "More preparation recommended"}</h2><p style={styles.muted}>Based only on the checklist answers you selected.</p></div>
-          </div>
-          <div style={{ height: 12, background: "#eaf0f8", borderRadius: 20, overflow: "hidden" }}><div style={{ width: score + "%", height: "100%", background: "#2457d6", borderRadius: 20 }} /></div>
-          <h3 style={{ marginTop: 26 }}>Insurance topics to discuss with a broker</h3>
-          {recommendations.map(x => <span key={x} style={styles.tag}>{x}</span>)}
-          <p style={{ ...styles.muted, marginTop: 16 }}>These topics are matched to checklist gaps for discussion only. A broker or insurer must assess your circumstances, eligibility, policy wording, exclusions and limits.</p>
-          <h3 style={{ marginTop: 24 }}>Suggested next steps</h3>
-          <ul style={{ ...styles.muted, paddingLeft: 22, lineHeight: 1.9 }}>
-            {(!answers.includes("mfa") || !answers.includes("backup") || !answers.includes("response")) && <li>Review access controls, backups and incident response readiness.</li>}
-            {(!answers.includes("governance") || !answers.includes("disclosures")) && <li>Review director governance processes and keep company disclosures current.</li>}
-            {(!answers.includes("keyperson") || !answers.includes("continuity")) && <li>Identify critical roles and document a continuity or succession plan.</li>}
-            {answers.length === checks.length && <li>Keep evidence of these controls current and review the checklist periodically with your broker.</li>}
-          </ul>
-          <button type="button" style={styles.outline as React.CSSProperties} onClick={() => window.print()}>Print / Save Risk Passport</button>
+        {token && (role === "broker" || role === "admin") && !loading && <section style={styles.panel}>
+          <h2>Customer Risk Passports</h2>
+          <p style={styles.muted}>Read-only view of saved customer preparedness profiles.</p>
+          {brokerPassports.length === 0 ? <p style={styles.muted}>No customer Risk Passports have been saved yet.</p> : brokerPassports.map((passport, index) => <article key={passport._id || index} style={{ padding: "16px 0", borderBottom: "1px solid #edf1f6" }}>
+            <strong>{passport.customer?.companyName || passport.customer?.name || "Customer"}</strong>
+            <p style={styles.muted}>{passport.customer?.email || ""} · {passport.companyType} · Readiness score: {passport.score}/100</p>
+            {(passport.recommendations || []).map(item => <span key={item} style={styles.tag}>{item}</span>)}
+          </article>)}
         </section>}
+
+        {token && role && role !== "customer" && role !== "broker" && role !== "admin" && <section style={styles.panel}>Your account role cannot access this page. Please sign in with a customer, broker or admin account.</section>}
         <footer style={{ textAlign: "center", color: "#7a8799", fontSize: 12, padding: 16 }}>CoverBridge MVP · Preparedness guidance only · Not an insurance policy or binding quote</footer>
       </div>
     </main>

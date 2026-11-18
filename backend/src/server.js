@@ -12,6 +12,7 @@ const authRoutes = require("./routes/auth.routes");
 const enquiryRoutes = require("./routes/enquiry.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const uploadRoutes = require("./routes/upload.routes");
+const riskPassportRoutes = require("./routes/riskPassport.routes");
 
 const app = express();
 app.use(helmet());
@@ -47,6 +48,7 @@ app.use("/api/enquiries", enquiryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/api/risk-passport", riskPassportRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
