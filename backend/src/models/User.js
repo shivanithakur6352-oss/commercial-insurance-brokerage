@@ -5,6 +5,8 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ["customer", "broker", "admin"], default: "customer" },
   companyName: { type: String, trim: true, default: "" },
-  phone: { type: String, trim: true, default: "" }
+  phone: { type: String, trim: true, default: "" },
+  passwordResetTokenHash: { type: String, select: false },
+  passwordResetExpiresAt: { type: Date, select: false }
 }, { timestamps: true });
 module.exports = mongoose.model("User", userSchema);
