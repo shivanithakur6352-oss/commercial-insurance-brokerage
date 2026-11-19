@@ -65,6 +65,19 @@ router.patch("/users/:id/role", async (req, res, next) => {
       return res.status(400).json({ message: "You cannot change your own admin role" });
     }
 
+    const targetUser = await User.findById(req.params.id).select("role");
+    if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+    // Keep at least one administrator able to manage the platform.
+    if (targetUser.role === "admin" && role !== "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+      if (adminCount <= 1) {
+        return res.status(409).json({
+          message: "The last administrator cannot be demoted. Promote another administrator first."
+        });
+      }
+    }
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { role },
