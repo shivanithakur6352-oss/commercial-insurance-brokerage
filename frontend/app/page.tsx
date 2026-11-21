@@ -669,7 +669,7 @@ if (data.user.role !== selectedPortal) {
           <form className="panel authPanel" onSubmit={submitNewPassword}>
             <h2>Verify OTP & set a new password</h2>
             <p className="muted">Enter the 6-digit OTP sent to {recoveryEmail}. It expires in 10 minutes.</p>
-            <label>6-digit OTP<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={resetToken} onChange={(e) => setResetToken(e.target.value.replace(/\\D/g, "").slice(0, 6))} /></label>
+            <label>6-digit OTP<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={resetToken} onChange={(e) => setResetToken(e.target.value.replace(/\D/g, "").slice(0, 6))} /></label>
             <label>New password<input required minLength={8} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
             <button className="primary">Update password</button>
             {message && <p className="notice">{message}</p>}
