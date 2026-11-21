@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   companyName: { type: String, trim: true, default: "" },
   phone: { type: String, trim: true, default: "" },
   passwordResetTokenHash: { type: String, select: false },
-  passwordResetExpiresAt: { type: Date, select: false }
+  passwordResetExpiresAt: { type: Date, select: false },
+  passwordResetAttempts: { type: Number, default: 0, select: false }
 }, { timestamps: true });
 module.exports = mongoose.model("User", userSchema);
