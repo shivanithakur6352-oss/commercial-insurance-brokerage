@@ -1,4 +1,5 @@
 const router = require("express").Router();
+const { Resend } = require("resend");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
