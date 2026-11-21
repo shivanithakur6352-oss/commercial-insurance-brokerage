@@ -1,8 +1,10 @@
+
 const router = require("express").Router();
-const { Resend } = require("resend");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const { Resend } = require("resend");
+
 const User = require("../models/User");
 const { auth } = require("../middleware/auth");
 
@@ -16,11 +18,17 @@ const safeUser = u => ({
 });
 
 function signToken(user) {
-  if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not configured");
-  return jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "12h" });
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+  return jwt.sign(
+    { id: user._id },
+    process.env.JWT_SECRET,
+    { expiresIn: "12h" }
+  );
 }
 
-// Public registration can ONLY create customer accounts.
+// Public registration creates customer accounts only.
 router.post("/register", async (req, res, next) => {
   try {
     const { name, email, password, companyName, phone } = req.body;
@@ -33,10 +41,13 @@ router.post("/register", async (req, res, next) => {
     }
 
     if (await User.findOne({ email: normalizedEmail })) {
-      return res.status(409).json({ message: "Email is already registered" });
+      return res.status(409).json({
+        message: "Email is already registered"
+      });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+
     const user = await User.create({
       name: String(name).trim(),
       email: normalizedEmail,
@@ -46,50 +57,81 @@ router.post("/register", async (req, res, next) => {
       role: "customer"
     });
 
-    res.status(201).json({ token: signToken(user), user: safeUser(user) });
+    res.status(201).json({
+      token: signToken(user),
+      user: safeUser(user)
+    });
   } catch (error) {
     next(error);
   }
 });
 
+// Login
 router.post("/login", async (req, res, next) => {
   try {
     const email = String(req.body.email || "").trim().toLowerCase();
     const user = await User.findOne({ email });
 
-    if (!user || !(await bcrypt.compare(req.body.password || "", user.passwordHash))) {
-      return res.status(401).json({ message: "Incorrect email or password" });
+    if (!user || !(await bcrypt.compare(
+      req.body.password || "",
+      user.passwordHash
+    ))) {
+      return res.status(401).json({
+        message: "Incorrect email or password"
+      });
     }
 
-    res.json({ token: signToken(user), user: safeUser(user) });
+    res.json({
+      token: signToken(user),
+      user: safeUser(user)
+    });
   } catch (error) {
     next(error);
   }
 });
 
-// One-time, secret-protected bootstrap. Promotes an existing account only when
-// the database has no admin yet. Never expose ADMIN_BOOTSTRAP_SECRET to the frontend.
+// Bootstrap admin
 router.post("/bootstrap-admin", async (req, res, next) => {
   try {
     const configuredSecret = process.env.ADMIN_BOOTSTRAP_SECRET || "";
-    const suppliedSecret = String(req.headers["x-admin-bootstrap-secret"] || "");
+    const suppliedSecret = String(
+      req.headers["x-admin-bootstrap-secret"] || ""
+    );
+
     const configured = Buffer.from(configuredSecret);
     const supplied = Buffer.from(suppliedSecret);
 
-    if (!configuredSecret || configured.length !== supplied.length ||
-        !crypto.timingSafeEqual(configured, supplied)) {
-      return res.status(403).json({ message: "Invalid bootstrap credentials" });
+    if (
+      !configuredSecret ||
+      configured.length !== supplied.length ||
+      !crypto.timingSafeEqual(configured, supplied)
+    ) {
+      return res.status(403).json({
+        message: "Invalid bootstrap credentials"
+      });
     }
 
     if (await User.exists({ role: "admin" })) {
-      return res.status(409).json({ message: "An admin account already exists. Bootstrap is disabled." });
+      return res.status(409).json({
+        message: "An admin account already exists. Bootstrap is disabled."
+      });
     }
 
     const email = String(req.body.email || "").trim().toLowerCase();
-    if (!email) return res.status(400).json({ message: "Account email is required" });
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Account email is required"
+      });
+    }
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "Create a customer account with this email first, then bootstrap it." });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Create a customer account with this email first, then bootstrap it."
+      });
+    }
 
     user.role = "admin";
     await user.save();
@@ -103,90 +145,173 @@ router.post("/bootstrap-admin", async (req, res, next) => {
   }
 });
 
-
+// Forgot password - Resend API
 router.post("/forgot-password", async (req, res, next) => {
   try {
     const email = String(req.body.email || "").trim().toLowerCase();
-    const genericMessage = "If an account exists for that email, a 6-digit OTP will be sent.";
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json({ message: genericMessage });
-    const user = await User.findOne({ email }).select("+passwordResetTokenHash +passwordResetExpiresAt +passwordResetAttempts");
-    if (!user) return res.json({ message: genericMessage });
 
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-      return res.status(503).json({ message: "Password reset email is not configured. Please contact support." });
+    const genericMessage =
+      "If an account exists for that email, a 6-digit OTP will be sent.";
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.json({ message: genericMessage });
     }
 
-    const otp = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
-    user.passwordResetTokenHash = crypto.createHash("sha256").update(otp).digest("hex");
-    user.passwordResetExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    if (!process.env.RESEND_API_KEY) {
+      console.error("RESEND_API_KEY is missing");
+      return res.status(503).json({
+        message: "Email service is not configured."
+      });
+    }
+
+    const user = await User.findOne({ email }).select(
+      "+passwordResetTokenHash +passwordResetExpiresAt +passwordResetAttempts"
+    );
+
+    if (!user) {
+      return res.json({ message: genericMessage });
+    }
+
+    const otp = String(
+      crypto.randomInt(0, 1000000)
+    ).padStart(6, "0");
+
+    user.passwordResetTokenHash = crypto
+      .createHash("sha256")
+      .update(otp)
+      .digest("hex");
+
+    user.passwordResetExpiresAt = new Date(
+      Date.now() + 10 * 60 * 1000
+    );
+
     user.passwordResetAttempts = 0;
     await user.save();
 
     try {
-      const nodemailer = require("nodemailer");
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
+      const resend = new Resend(process.env.RESEND_API_KEY);
+
+      const { data, error } = await resend.emails.send({
+        from:
+          process.env.RESEND_FROM_EMAIL ||
+          "CoverBridge <onboarding@resend.dev>",
+
+        to: [user.email],
+
+        subject: "Your CoverBridge Password Reset OTP",
+
+        html: `
+          <div style="font-family:Arial,sans-serif;padding:20px">
+            <h2>CoverBridge Password Reset</h2>
+            <p>Hello ${String(user.name || "there").replace(/[&<>"']/g, "")},</p>
+            <p>Your password reset OTP is:</p>
+            <h1 style="letter-spacing:8px;color:#1947b8">${otp}</h1>
+            <p>This OTP expires in 10 minutes.</p>
+            <p>If you did not request this, ignore this email.</p>
+          </div>
+        `
       });
-      await transporter.sendMail({
-        from: process.env.GMAIL_USER,
-        to: user.email,
-        subject: "Your CoverBridge password reset OTP",
-        text: `Hello ${user.name || "there"}, your CoverBridge password reset OTP is ${otp}. It expires in 10 minutes. If you did not request this, ignore this email.`,
-        html: `<p>Hello ${String(user.name || "there").replace(/[&<>"]/g, "")},</p><p>Your CoverBridge password reset OTP is:</p><h2 style="letter-spacing:4px">${otp}</h2><p>This OTP expires in 10 minutes and can only be used once.</p><p>If you did not request this, ignore this email.</p>`
-      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      console.log("Password reset email sent:", data?.id);
+
     } catch (mailError) {
-      console.error("Password reset email error:", mailError);
+      console.error("Resend email error:", mailError);
+
       user.passwordResetTokenHash = undefined;
       user.passwordResetExpiresAt = undefined;
       user.passwordResetAttempts = 0;
+
       await user.save();
-      return res.status(502).json({ message: "Could not send the OTP email. Check Gmail SMTP configuration and try again." });
+
+      return res.status(502).json({
+        message: "Could not send OTP email. Please try again."
+      });
     }
+
     return res.json({ message: genericMessage });
-  } catch (error) { next(error); }
+
+  } catch (error) {
+    next(error);
+  }
 });
 
+// Reset password
 router.post("/reset-password", async (req, res, next) => {
   try {
     const email = String(req.body.email || "").trim().toLowerCase();
     const otp = String(req.body.otp || "").trim();
     const password = String(req.body.password || "");
+
     if (!email || !/^\d{6}$/.test(otp) || password.length < 8) {
-      return res.status(400).json({ message: "Enter your registered email, 6-digit OTP and a password of at least 8 characters." });
+      return res.status(400).json({
+        message: "Enter your registered email, 6-digit OTP and a password of at least 8 characters."
+      });
     }
 
-    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+    const otpHash = crypto
+      .createHash("sha256")
+      .update(otp)
+      .digest("hex");
+
     const user = await User.findOne({
       email,
       passwordResetTokenHash: otpHash,
       passwordResetExpiresAt: { $gt: new Date() },
       passwordResetAttempts: { $lt: 5 }
-    }).select("+passwordResetTokenHash +passwordResetExpiresAt +passwordResetAttempts");
+    }).select(
+      "+passwordResetTokenHash +passwordResetExpiresAt +passwordResetAttempts"
+    );
 
     if (!user) {
-      const pendingUser = await User.findOne({ email }).select("+passwordResetTokenHash +passwordResetExpiresAt +passwordResetAttempts");
-      if (pendingUser && pendingUser.passwordResetTokenHash && pendingUser.passwordResetExpiresAt > new Date()) {
-        pendingUser.passwordResetAttempts = (pendingUser.passwordResetAttempts || 0) + 1;
+      const pendingUser = await User.findOne({ email }).select(
+        "+passwordResetTokenHash +passwordResetExpiresAt +passwordResetAttempts"
+      );
+
+      if (
+        pendingUser &&
+        pendingUser.passwordResetTokenHash &&
+        pendingUser.passwordResetExpiresAt > new Date()
+      ) {
+        pendingUser.passwordResetAttempts =
+          (pendingUser.passwordResetAttempts || 0) + 1;
+
         if (pendingUser.passwordResetAttempts >= 5) {
           pendingUser.passwordResetTokenHash = undefined;
           pendingUser.passwordResetExpiresAt = undefined;
           pendingUser.passwordResetAttempts = 0;
         }
+
         await pendingUser.save();
       }
-      return res.status(400).json({ message: "The OTP is invalid, expired, or has reached the maximum number of attempts. Please request a new OTP." });
+
+      return res.status(400).json({
+        message: "The OTP is invalid, expired, or has reached the maximum number of attempts. Please request a new OTP."
+      });
     }
 
     user.passwordHash = await bcrypt.hash(password, 12);
     user.passwordResetTokenHash = undefined;
     user.passwordResetExpiresAt = undefined;
     user.passwordResetAttempts = 0;
+
     await user.save();
-    return res.json({ message: "Password updated successfully. You can now sign in with your new password." });
-  } catch (error) { next(error); }
+
+    return res.json({
+      message: "Password updated successfully. You can now sign in with your new password."
+    });
+
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.get("/me", auth, (req, res) => res.json({ user: safeUser(req.user) }));
+// Current user
+router.get("/me", auth, (req, res) => {
+  res.json({ user: safeUser(req.user) });
+});
 
 module.exports = router;
