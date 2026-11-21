@@ -191,7 +191,8 @@ const [adminTab, setAdminTab] = useState("overview");
       localStorage.removeItem("coverbridge_user");
       setToken("");
       setUser(null);
-      setResetToken(reset);
+      setRecoveryEmail("");
+      setResetToken("");
       setRecoveryMode("reset");
       setMode("login");
       setShowAuth(true);
@@ -219,14 +220,15 @@ const [adminTab, setAdminTab] = useState("overview");
     e.preventDefault(); setMessage("");
     try {
       const data = await request("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email: recoveryEmail }) }, "");
-      setMessage(data.message || "If an account exists, a reset link will be sent.");
+      setMessage(data.message || "If an account exists, an OTP will be sent.");
+      setRecoveryMode("reset");
     } catch (e) { setMessage(e instanceof Error ? e.message : "Could not request password reset"); }
   }
 
   async function submitNewPassword(e: React.FormEvent) {
     e.preventDefault(); setMessage("");
     try {
-      const data = await request("/auth/reset-password", { method: "POST", body: JSON.stringify({ token: resetToken, password: newPassword }) }, "");
+      const data = await request("/auth/reset-password", { method: "POST", body: JSON.stringify({ email: recoveryEmail, otp: resetToken, password: newPassword }) }, "");
       setMessage(data.message || "Password updated. Please sign in.");
       setRecoveryMode(null); setResetToken(""); setNewPassword(""); setMode("login");
     } catch (e) { setMessage(e instanceof Error ? e.message : "Could not reset password"); }
@@ -658,15 +660,16 @@ if (data.user.role !== selectedPortal) {
           <form className="panel authPanel" onSubmit={requestPasswordReset}>
             <button type="button" className="linkButton" onClick={() => { setRecoveryMode(null); setMessage(""); }}>← Back to login</button>
             <h2>Forgot Password?</h2>
-            <p className="muted">Enter your registered email address. If an account exists, we'll send a secure reset link.</p>
+            <p className="muted">Enter your registered email address. Enter your registered email address. We'll send a 6-digit OTP if the account exists.</p>
             <label>Email<input required type="email" value={recoveryEmail} onChange={(e) => setRecoveryEmail(e.target.value)} /></label>
-            <button className="primary">Send reset link</button>
+            <button className="primary">Send OTP</button>
             {message && <p className="notice">{message}</p>}
           </form>
         ) : recoveryMode === "reset" ? (
           <form className="panel authPanel" onSubmit={submitNewPassword}>
-            <h2>Set a new password</h2>
-            <p className="muted">Choose a new password with at least 8 characters.</p>
+            <h2>Verify OTP & set a new password</h2>
+            <p className="muted">Enter the 6-digit OTP sent to {recoveryEmail}. It expires in 10 minutes.</p>
+            <label>6-digit OTP<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={resetToken} onChange={(e) => setResetToken(e.target.value.replace(/\\D/g, "").slice(0, 6))} /></label>
             <label>New password<input required minLength={8} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
             <button className="primary">Update password</button>
             {message && <p className="notice">{message}</p>}
