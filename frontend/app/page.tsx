@@ -51,6 +51,8 @@ export default function Home() {
   const [showAuth, setShowAuth] = useState(false);
   const [recoveryMode, setRecoveryMode] = useState<"forgot" | "reset" | null>(null);
   const [resetToken, setResetToken] = useState("");
+  const [loginOtpStage, setLoginOtpStage] = useState(false);
+  const [loginOtp, setLoginOtp] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
@@ -235,45 +237,35 @@ const [adminTab, setAdminTab] = useState("overview");
   }
 
   async function authenticate(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage("");
-
+    e.preventDefault(); setMessage("");
     try {
-      const data = await request(
-        `/auth/${mode}`,
-        {
-          method: "POST",
-          body: JSON.stringify(authForm),
-        },
-        ""
-      );
-       
-if (data.user.role !== selectedPortal) {
-  throw new Error(
-    `This account is not registered as ${selectedPortal}. Please use the correct portal.`
-  );
-}
+      const data = await request(`/auth/${mode}`, { method: "POST", body: JSON.stringify(authForm) }, "");
+      if (mode === "login" && data.requiresOtp) {
+        setLoginOtpStage(true);
+        setMessage(data.message || "Login OTP sent.");
+        return;
+      }
+      if (data.user.role !== selectedPortal) throw new Error(`This account is not registered as ${selectedPortal}. Please use the correct portal.`);
+      finishLogin(data);
+    } catch (e) { setMessage(e instanceof Error ? e.message : "Authentication failed"); }
+  }
 
-      setToken(data.token);
-      setUser(data.user);
+  async function verifyLoginOtp(e: React.FormEvent) {
+    e.preventDefault(); setMessage("");
+    try {
+      const data = await request("/auth/verify-login-otp", { method: "POST", body: JSON.stringify({ email: authForm.email, otp: loginOtp }) }, "");
+      if (data.user.role !== selectedPortal) throw new Error(`This account is not registered as ${selectedPortal}. Please use the correct portal.`);
+      finishLogin(data);
+    } catch (e) { setMessage(e instanceof Error ? e.message : "OTP verification failed"); }
+  }
 
-      localStorage.setItem("coverbridge_token", data.token);
-      localStorage.setItem(
-        "coverbridge_user",
-        JSON.stringify(data.user)
-      );
-
-      setShowAuth(false);
-      setMessage("Welcome to CoverBridge.");
-
-      loadDashboard(data.token, data.user);
-    } catch (e) {
-      setMessage(
-        e instanceof Error
-          ? e.message
-          : "Authentication failed"
-      );
-    }
+  function finishLogin(data: any) {
+    setToken(data.token); setUser(data.user);
+    localStorage.setItem("coverbridge_token", data.token);
+    localStorage.setItem("coverbridge_user", JSON.stringify(data.user));
+    setShowAuth(false); setLoginOtpStage(false); setLoginOtp("");
+    setMessage("Welcome to CoverBridge.");
+    loadDashboard(data.token, data.user);
   }
 
   async function updateUserRole(userId: string, role: "customer" | "broker" | "admin") {
@@ -672,6 +664,15 @@ if (data.user.role !== selectedPortal) {
             <label>6-digit OTP<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={resetToken} onChange={(e) => setResetToken(e.target.value.replace(/\D/g, "").slice(0, 6))} /></label>
             <label>New password<input required minLength={8} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
             <button className="primary">Update password</button>
+            {message && <p className="notice">{message}</p>}
+          </form>
+        ) : loginOtpStage ? (
+          <form className="panel authPanel" onSubmit={verifyLoginOtp}>
+            <h2>Verify Login OTP</h2>
+            <p className="muted">Enter the 6-digit OTP sent to {authForm.email}. It expires in 10 minutes.</p>
+            <label>6-digit OTP<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={loginOtp} onChange={(e) => setLoginOtp(e.target.value.replace(/\\D/g, "").slice(0, 6))} /></label>
+            <button className="primary">Verify & Sign In</button>
+            <button type="button" className="linkButton" onClick={() => { setLoginOtpStage(false); setLoginOtp(""); setMessage(""); }}>Back to login</button>
             {message && <p className="notice">{message}</p>}
           </form>
         ) : (
