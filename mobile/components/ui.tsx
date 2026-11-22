@@ -1,5 +1,5 @@
-import { PropsWithChildren } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View } from "react-native";
+import type { PropsWithChildren } from "react";
+import { ActivityIndicator,Pressable,ScrollView,StyleSheet,Text,TextInput,TextInputProps,ScrollViewProps,View } from "react-native";
 export const C={navy:"#10264B",blue:"#2457D6",bg:"#F4F7FC",ink:"#17243A",muted:"#68758A",border:"#DFE6F0",white:"#FFFFFF",red:"#B42318",green:"#13845B"};
 export const S=StyleSheet.create({
  page:{flexGrow:1,padding:20,paddingBottom:40,backgroundColor:C.bg},
@@ -15,13 +15,15 @@ export const S=StyleSheet.create({
  error:{color:C.red,backgroundColor:"#FDEDEC",padding:10,borderRadius:9,marginTop:10},
  row:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:10},
  chip:{borderWidth:1,borderColor:C.border,borderRadius:20,paddingHorizontal:11,paddingVertical:8,marginRight:7,marginBottom:7},
- chipActive:{backgroundColor:"#E9EFFF",borderColor:C.blue},
+ chipActive:{backgroundColor:"#E9EFFF",borderColor:C.blue}
 });
-export function Field({label,...props}:TextInputProps & {label:string}) {
+export function Field({label,...props}:TextInputProps & {label:string}){
  return <View style={{marginBottom:9}}><Text style={S.label}>{label}</Text><TextInput placeholderTextColor="#98A3B3" {...props} style={[S.input,props.multiline&&{minHeight:90,textAlignVertical:"top"},props.style]}/></View>;
 }
-export function Button({title,onPress,busy,disabled}:{title:string;onPress:()=>void;busy?:boolean;disabled?:boolean}) {
+export function Button({title,onPress,busy,disabled}:{title:string;onPress:()=>void;busy?:boolean;disabled?:boolean}){
  return <Pressable onPress={onPress} disabled={busy||disabled} style={[S.button,(busy||disabled)&&{opacity:.55}]}><View style={S.row}>{busy?<ActivityIndicator color="white"/>:null}<Text style={S.buttonText}>{busy?"PLEASE WAIT":title}</Text></View></Pressable>;
 }
-export function Page({children}:PropsWithChildren) { return <ScrollView contentContainerStyle={S.page} keyboardShouldPersistTaps="handled">{children}</ScrollView>; }
-export function ErrorText({children}:{children?:string}) { return children?<Text style={S.error}>{children}</Text>:null; }
+export function Page({children,refreshControl,...props}:PropsWithChildren<ScrollViewProps>){
+ return <ScrollView contentContainerStyle={S.page} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} {...props}>{children}</ScrollView>;
+}
+export function ErrorText({children}:{children?:string}){return children?<Text style={S.error}>{children}</Text>:null;}
