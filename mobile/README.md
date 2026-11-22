@@ -1,38 +1,49 @@
 # CoverBridge Mobile (Expo)
 
-A separate React Native mobile client for the existing CoverBridge backend. The Next.js website and Express API remain unchanged.
+Separate Expo SDK 54 / React Native / TypeScript application using Expo Router. The website and Render backend are unchanged.
 
-## Stack
-- Expo SDK 54
-- React Native + TypeScript
-- Expo Router
-- Expo SecureStore for the JWT session
-- Existing Express/MongoDB backend APIs
+## Requirements
+- Node.js LTS (20+ recommended)
+- Android Studio emulator or Android phone with Expo Go
+- EAS account for cloud APK builds
 
-## Setup
-1. Install Node.js LTS.
-2. From this directory run `npm install`.
-3. Copy `.env.example` to `.env`.
-4. Keep `EXPO_PUBLIC_API_URL` pointed at the deployed API:
-   `https://commercial-insurance-brokerage.onrender.com/api`
-5. Run `npx expo install --fix` to align native package versions with the installed Expo SDK.
-6. Run `npx expo start` and scan the QR code using Expo Go, or launch an Android emulator.
+## Install and run
+```bash
+cd mobile
+npm install
+cp .env.example .env
+# EXPO_PUBLIC_API_URL defaults to the deployed Render API
+npx expo install --fix
+npx expo start
+```
+Scan the QR code with Expo Go, or press `a` to launch an Android emulator.
 
-## Current first milestone
-- Customer/broker/admin login using the existing `POST /auth/login` API
-- Customer registration using the existing `POST /auth/register` API
-- JWT stored using Expo SecureStore (not browser localStorage)
-- Role-based workspace navigation
-- Admin overview, users, enquiries, quotations and Risk Passport summary
-- Customer enquiry creation and enquiry list
-- Broker enquiry status updates
+## Type-check and Android export
+```bash
+npm run typecheck
+npx expo export --platform android
+```
 
-## Next migration screens
-- Full Risk Passport questionnaire and save flow
-- Broker quotation creation/editing form
-- Admin role management actions with confirmation and last-admin protection handling
-- Forgot/reset password deep-link flow
-- Document upload using Expo DocumentPicker and multipart FormData
-- Device-level testing, accessibility, offline/error states and release builds
+## Build installable APK
+```bash
+npx eas-cli build:configure
+npx eas-cli build --platform android --profile preview
+```
 
-The mobile app is a new client, not a conversion of DOM elements. Do not move backend secrets into this app. Only the public API base URL belongs in `EXPO_PUBLIC_API_URL`.
+## Implemented screens and workflows
+- Customer registration and password login followed by mandatory email OTP verification
+- Forgot password and OTP-based password reset
+- JWT storage in Expo SecureStore; profile refresh through `GET /auth/me`
+- Role-aware dashboards for customer, broker and admin
+- Customer enquiry submission and history
+- Broker/admin enquiry status changes
+- Broker/admin quotation editor; customer quotation viewing
+- Customer Risk Passport checklist and broker/admin passport review
+- Profile and sign-out
+- Admin user listing and role assignment with confirmation; backend retains authorization and last-admin safeguards
+
+Public registration creates customer accounts only. Broker/admin roles must be assigned by an administrator. Email OTP depends on the existing backend Gmail Apps Script configuration. Risk Passport is a broker-preparation checklist, not underwriting or insurance advice.
+
+## Notes
+- Only the public API base URL belongs in the Expo environment. Never put backend secrets in the mobile bundle.
+- Document upload and a native document picker are not included in this first mobile release.
