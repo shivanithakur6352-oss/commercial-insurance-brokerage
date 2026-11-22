@@ -1,0 +1,11 @@
+import { useCallback,useState } from "react";
+import { Alert,Pressable,Text,View } from "react-native";
+import { useFocusEffect,router } from "expo-router";
+import { api,clearSession,readSession,User } from "../../lib/api";
+import { Page,S,C } from "../../components/ui";
+export default function Profile(){
+ const [user,setUser]=useState<User|null>(null);const [error,setError]=useState("");
+ useFocusEffect(useCallback(()=>{readSession().then(async s=>{if(!s){router.replace("/login");return;}try{const r=await api<{user:User}>("/auth/me",s.token);setUser(r.user);}catch(e){setUser(s.user);setError(e instanceof Error?e.message:"Could not refresh profile");}});},[]));
+ function logout(){Alert.alert("Sign out","Sign out of CoverBridge on this device?",[{text:"Cancel",style:"cancel"},{text:"Sign out",style:"destructive",onPress:async()=>{await clearSession();router.replace("/login");}}]);}
+ return <Page><Text style={S.title}>Profile</Text><Text style={S.subtitle}>Account and security details.</Text><View style={S.card}><View style={{width:58,height:58,borderRadius:29,backgroundColor:"#E9EFFF",alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:24,fontWeight:"800",color:C.blue}}>{user?.name?.[0]||"C"}</Text></View><Text style={{fontSize:20,fontWeight:"800",color:C.navy,marginTop:12}}>{user?.name||"Loading profile…"}</Text><Text style={S.muted}>{user?.email}</Text><Text style={{color:C.blue,fontWeight:"800",marginTop:9}}>{user?.role?.toUpperCase()}</Text></View><View style={S.card}><Text style={S.label}>Company</Text><Text style={{color:C.ink}}>{user?.companyName||"Not provided"}</Text><Text style={S.label}>Phone</Text><Text style={{color:C.ink}}>{user?.phone||"Not provided"}</Text></View>{error?<Text style={S.muted}>{error}</Text>:null}{user?.role==="admin"?<Pressable onPress={()=>router.push("/(tabs)/admin-users")}><Text style={S.link}>Manage users and roles</Text></Pressable>:null}<Pressable onPress={logout} style={[S.button,{backgroundColor:"#B42318"}]}><Text style={S.buttonText}>SIGN OUT</Text></Pressable></Page>;
+}
