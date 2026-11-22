@@ -26,6 +26,8 @@ export default function HomeScreen() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [tab, setTab] = useState("Overview");
   const [message, setMessage] = useState("");
+  const [otpStage, setOtpStage] = useState(false);
+  const [otp, setOtp] = useState("");
   const [form, setForm] = useState({ name: "", email: "", password: "", companyName: "", phone: "" });
   const [overview, setOverview] = useState<Overview | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -82,16 +84,36 @@ export default function HomeScreen() {
     setBusy(true); setMessage("");
     try {
       const path = mode === "login" ? "/auth/login" : "/auth/register";
-      const data = await api<{ token: string; user: User }>(path, undefined, {
+      const data = await api<{ token?: string; user?: User; requiresOtp?: boolean; message?: string }>(path, undefined, {
         method: "POST",
         body: JSON.stringify(form)
       });
+      if (mode === "login" && data.requiresOtp) {
+        setOtpStage(true);
+        setMessage(data.message || "A 6-digit login OTP has been sent to your registered email.");
+        return;
+      }
+      if (!data.token || !data.user) throw new Error("The server did not return a valid session.");
       await saveSession(data.token, data.user);
       setToken(data.token); setUser(data.user);
       await loadDashboard(data.token, data.user);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Authentication failed");
     } finally { setBusy(false); }
+  }
+
+  async function verifyLoginOtp() {
+    if (!/^\\d{6}$/.test(otp)) { setMessage("Enter the 6-digit OTP sent to your email."); return; }
+    setBusy(true); setMessage("");
+    try {
+      const data = await api<{ token: string; user: User }>("/auth/verify-login-otp", undefined, {
+        method: "POST", body: JSON.stringify({ email: form.email.trim().toLowerCase(), otp })
+      });
+      await saveSession(data.token, data.user);
+      setToken(data.token); setUser(data.user); setOtpStage(false); setOtp("");
+      await loadDashboard(data.token, data.user);
+    } catch (e) { setMessage(e instanceof Error ? e.message : "OTP verification failed"); }
+    finally { setBusy(false); }
   }
 
   async function logout() {
@@ -146,14 +168,15 @@ export default function HomeScreen() {
         <Text style={styles.subtitle}>COMMERCIAL INSURANCE</Text>
         <Text style={styles.heading}>{mode === "login" ? "Welcome back" : "Create your account"}</Text>
         <Text style={styles.muted}>Sign in to manage your commercial insurance workspace.</Text>
-        {mode === "register" && field("Full name", "name")}
-        {field("Email address", "email")}
-        {field("Password (minimum 8 characters)", "password", true)}
-        {mode === "register" && field("Company name", "companyName")}
-        {mode === "register" && field("Phone", "phone")}
+        {!otpStage && mode === "register" && field("Full name", "name")}
+        {!otpStage && field("Email address", "email")}
+        {otpStage && <View style={styles.field}><Text style={styles.label}>6-digit email OTP</Text><TextInput style={styles.input} value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} placeholder="000000" /></View>}
+        {!otpStage && field("Password (minimum 8 characters)", "password", true)}
+        {!otpStage && mode === "register" && field("Company name", "companyName")}
+        {!otpStage && mode === "register" && field("Phone", "phone")}
         {message ? <Text style={styles.error}>{message}</Text> : null}
-        <Button title={busy ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"} onPress={authenticate} disabled={busy} />
-        <Pressable onPress={() => { setMode(mode === "login" ? "register" : "login"); setMessage(""); }}>
+        <Button title={busy ? "Please wait..." : otpStage ? "Verify OTP" : mode === "login" ? "Send login OTP" : "Create account"} onPress={otpStage ? verifyLoginOtp : authenticate} disabled={busy} />
+        <Pressable onPress={() => { setMode(mode === "login" ? "register" : "login"); setOtpStage(false); setOtp(""); setMessage(""); }}>
           <Text style={styles.link}>{mode === "login" ? "New to CoverBridge? Create an account" : "Already registered? Sign in"}</Text>
         </Pressable>
       </ScrollView>
