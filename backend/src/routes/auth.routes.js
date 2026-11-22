@@ -119,7 +119,7 @@ router.post("/verify-login-otp", async (req, res, next) => {
   try {
     const email = String(req.body.email || "").trim().toLowerCase();
     const otp = String(req.body.otp || "").trim();
-    if (!email || !/^\\d{6}$/.test(otp)) {
+    if (!email || !/^\d{6}$/.test(otp)) {
       return res.status(400).json({ message: "Enter your registered email and 6-digit OTP." });
     }
     const hash = crypto.createHash("sha256").update(otp).digest("hex");
