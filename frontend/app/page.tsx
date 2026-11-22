@@ -670,7 +670,7 @@ const [adminTab, setAdminTab] = useState("overview");
           <form className="panel authPanel" onSubmit={verifyLoginOtp}>
             <h2>Verify Login OTP</h2>
             <p className="muted">Enter the 6-digit OTP sent to {authForm.email}. It expires in 10 minutes.</p>
-            <label>6-digit OTP<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={loginOtp} onChange={(e) => setLoginOtp(e.target.value.replace(/\\D/g, "").slice(0, 6))} /></label>
+            <label>6-digit OTP<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={loginOtp} onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} /></label>
             <button className="primary">Verify & Sign In</button>
             <button type="button" className="linkButton" onClick={() => { setLoginOtpStage(false); setLoginOtp(""); setMessage(""); }}>Back to login</button>
             {message && <p className="notice">{message}</p>}
