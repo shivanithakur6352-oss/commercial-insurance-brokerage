@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "CoverBridge",
+    "slug": "coverbridge",
+    "scheme": "coverbridge",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": { "typedRoutes": true },
+    "android": { "package": "com.riyazinnovation.coverbridge" },
+    "ios": { "bundleIdentifier": "com.riyazinnovation.coverbridge" }
+  }
+}

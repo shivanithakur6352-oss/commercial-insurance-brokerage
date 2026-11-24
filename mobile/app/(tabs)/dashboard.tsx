@@ -1,0 +1,12 @@
+import { useCallback,useState } from "react";
+import { RefreshControl,Text,View } from "react-native";
+import { useFocusEffect,router } from "expo-router";
+import { api,readSession,User } from "../../lib/api";
+import { Page,S,C } from "../../components/ui";
+type Enquiry={_id:string;companyName:string;insuranceType:string;industry:string;status:string};
+export default function Dashboard(){
+ const [user,setUser]=useState<User|null>(null);const [stats,setStats]=useState<Record<string,number>>({});const [items,setItems]=useState<Enquiry[]>([]);const [refresh,setRefresh]=useState(false);const [error,setError]=useState("");
+ const load=async()=>{setRefresh(true);setError("");try{const s=await readSession();if(!s){router.replace("/login");return;}setUser(s.user);if(s.user.role==="admin"){const [o,e]=await Promise.all([api<Record<string,number>>("/admin/overview",s.token),api<{enquiries:Enquiry[]}>("/admin/enquiries",s.token)]);setStats(o);setItems(e.enquiries||[]);}else if(s.user.role==="broker"){const [o,e]=await Promise.all([api<Record<string,number>>("/dashboard/summary",s.token),api<{enquiries:Enquiry[]}>("/enquiries",s.token)]);setStats(o);setItems(e.enquiries||[]);}else{const e=await api<{enquiries:Enquiry[]}>("/enquiries/mine",s.token);setItems(e.enquiries||[]);setStats({totalEnquiries:(e.enquiries||[]).length});}}catch(e){setError(e instanceof Error?e.message:"Could not load dashboard");}finally{setRefresh(false);}};
+ useFocusEffect(useCallback(()=>{load();},[]));
+ return <Page refreshControl={<RefreshControl refreshing={refresh} onRefresh={load}/>}><Text style={S.title}>Hello, {user?.name?.split(" ")[0]||"there"}</Text><Text style={S.subtitle}>{user?.role?.toUpperCase()||"COVERBRIDGE"} WORKSPACE</Text>{error?<Text style={S.error}>{error}</Text>:null}<View style={{flexDirection:"row",flexWrap:"wrap",gap:10}}>{Object.entries(stats).map(([k,v])=><View key={k} style={[S.card,{width:"47%"}]}><Text style={S.muted}>{k.replace(/([A-Z])/g," $1")}</Text><Text style={{fontSize:25,fontWeight:"800",color:C.navy,marginTop:6}}>{v}</Text></View>)}</View><Text style={[S.title,{fontSize:19,marginTop:10}]}>Recent enquiries</Text>{items.slice(0,6).map(x=><View style={S.card} key={x._id}><Text style={{fontWeight:"800",color:C.ink,fontSize:16}}>{x.companyName}</Text><Text style={S.muted}>{x.industry} · {x.insuranceType}</Text><Text style={{color:C.blue,fontWeight:"700",marginTop:7}}>{x.status?.replace("_"," ").toUpperCase()}</Text></View>)}{!items.length?<Text style={S.muted}>No enquiries yet.</Text>:null}</Page>;
+}
